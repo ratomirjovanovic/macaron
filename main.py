@@ -70,12 +70,12 @@ class MacaronApp:
         # Setup logging
         self.setup_logging()
         
-        # Create GUI
+        # Style configuration FIRST - defines self.colors
+        self.configure_styles()
+        
+        # Create GUI - now self.colors is available
         self.create_widgets()
         self.scan_interfaces()
-        
-        # Style configuration
-        self.configure_styles()
         
     def setup_logging(self):
         """Setup logging for security and audit purposes"""
