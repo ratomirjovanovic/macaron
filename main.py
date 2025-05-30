@@ -915,7 +915,7 @@ class MacaronApp:
         # Create progress window
         progress_window = tk.Toplevel(self.root)
         progress_window.title("MACARON - Enable All Interfaces")
-        progress_window.geometry("600x500")
+        progress_window.geometry("700x600")
         progress_window.resizable(False, False)
         
         # Center the window
@@ -926,9 +926,22 @@ class MacaronApp:
         progress_text = scrolledtext.ScrolledText(progress_window, wrap=tk.WORD, font=('Courier', 10))
         progress_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        def log_progress(message, color="black"):
+        # Add progress bar
+        progress_frame = tk.Frame(progress_window)
+        progress_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
+        
+        progress_bar = ttk.Progressbar(progress_frame, mode='determinate', length=400)
+        progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        
+        progress_label = tk.Label(progress_frame, text="Starting...", font=('Arial', 9))
+        progress_label.pack(side=tk.RIGHT, padx=(10, 0))
+        
+        def log_progress(message, color="black", step=None, total_steps=8):
             progress_text.insert(tk.END, message + "\n")
             progress_text.see(tk.END)
+            if step:
+                progress_bar['value'] = (step / total_steps) * 100
+                progress_label.config(text=f"Step {step}/{total_steps}")
             progress_window.update()
             self.log(message)  # Also log to main log
         
@@ -938,7 +951,7 @@ class MacaronApp:
         
         try:
             # Step 1: Check root privileges
-            log_progress("📋 STEP 1: Checking Privileges")
+            log_progress("📋 STEP 1: Checking Privileges", step=1)
             if os.geteuid() != 0:
                 log_progress("❌ ERROR: Root privileges required!")
                 messagebox.showerror("Permission Error", "This operation requires root privileges.\nRestart MACARON with: sudo python3 main.py")
@@ -948,7 +961,7 @@ class MacaronApp:
             log_progress("")
             
             # Step 2: Unblock RF interfaces (WiFi/Bluetooth)
-            log_progress("📡 STEP 2: Unblocking RF Interfaces")
+            log_progress("📡 STEP 2: Unblocking RF Interfaces", step=2)
             try:
                 # Check if rfkill is available
                 subprocess.run(['which', 'rfkill'], check=True, capture_output=True)
@@ -966,10 +979,12 @@ class MacaronApp:
                     log_progress("✅ No blocked RF interfaces found")
                     
             except subprocess.CalledProcessError:
-                log_progress("⚠️ rfkill not available or failed - trying to install...")
+                log_progress("⚠️ rfkill not available - trying to install...")
                 try:
-                    subprocess.run(['apt', 'update', '-q'], capture_output=True, timeout=30)
-                    subprocess.run(['apt', 'install', '-y', 'rfkill'], capture_output=True, timeout=60)
+                    log_progress("📥 Updating package list...")
+                    subprocess.run(['apt', 'update', '-q'], capture_output=True, timeout=60)
+                    log_progress("📦 Installing rfkill...")
+                    subprocess.run(['apt', 'install', '-y', 'rfkill'], capture_output=True, timeout=120)
                     subprocess.run(['rfkill', 'unblock', 'all'], capture_output=True)
                     log_progress("✅ rfkill installed and interfaces unblocked")
                 except Exception as e:
@@ -977,25 +992,31 @@ class MacaronApp:
             log_progress("")
             
             # Step 3: Load network kernel modules
-            log_progress("🔧 STEP 3: Loading Network Kernel Modules")
+            log_progress("🔧 STEP 3: Loading Network Kernel Modules", step=3)
             modules = ["iwlwifi", "ath9k", "ath9k_htc", "rt2800usb", "rt2800pci", 
                       "rtl8188eu", "rtl8192cu", "rtl8812au", "btusb"]
             
-            for module in modules:
+            for i, module in enumerate(modules):
                 try:
                     # Check if module is already loaded
                     result = subprocess.run(['lsmod'], capture_output=True, text=True)
                     if module in result.stdout:
                         log_progress(f"✅ {module} already loaded")
                     else:
+                        log_progress(f"🔄 Loading {module} module...")
                         subprocess.run(['modprobe', module], check=True, capture_output=True)
                         log_progress(f"✅ Loaded {module} module")
+                        
+                        # Small delay to let module initialize
+                        if module.startswith(('iwl', 'ath', 'rt')):
+                            time.sleep(1)
+                            
                 except subprocess.CalledProcessError:
                     log_progress(f"⚠️ Could not load {module} (may not be available)")
             log_progress("")
             
-            # Step 4: Start Bluetooth service
-            log_progress("📱 STEP 4: Bluetooth Service Activation")
+            # Step 4: Start Bluetooth service  
+            log_progress("📱 STEP 4: Bluetooth Service Activation", step=4)
             try:
                 # Check if bluetooth service exists
                 result = subprocess.run(['systemctl', 'is-available', 'bluetooth'], 
@@ -1003,7 +1024,7 @@ class MacaronApp:
                 if result.returncode == 0:
                     log_progress("🔄 Starting Bluetooth service...")
                     subprocess.run(['systemctl', 'start', 'bluetooth'], 
-                                 capture_output=True, timeout=10)
+                                 capture_output=True, timeout=20)
                     subprocess.run(['systemctl', 'enable', 'bluetooth'], 
                                  capture_output=True, timeout=10)
                     
@@ -1012,23 +1033,35 @@ class MacaronApp:
                         subprocess.run(['which', 'bluetoothctl'], check=True, capture_output=True)
                         process = subprocess.Popen(['bluetoothctl'], stdin=subprocess.PIPE, 
                                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                        process.communicate(input=b'power on\nquit\n', timeout=5)
+                        process.communicate(input=b'power on\nquit\n', timeout=10)
                         log_progress("✅ Bluetooth service started and powered on")
                     except Exception:
                         log_progress("✅ Bluetooth service started")
                 else:
-                    log_progress("⚠️ Installing Bluetooth packages...")
-                    subprocess.run(['apt', 'install', '-y', 'bluez', 'bluetooth', 'bluez-tools'], 
-                                 capture_output=True, timeout=120)
-                    subprocess.run(['systemctl', 'start', 'bluetooth'], capture_output=True)
-                    log_progress("✅ Bluetooth installed and started")
+                    log_progress("⚠️ Installing Bluetooth packages (this may take 2-3 minutes)...")
+                    log_progress("📥 Please wait - downloading Bluetooth stack...")
                     
+                    # Install with better error handling and longer timeout
+                    result = subprocess.run(['apt', 'install', '-y', 'bluez', 'bluetooth', 'bluez-tools'], 
+                                 capture_output=True, timeout=300, text=True)  # 5 minutes timeout
+                    
+                    if result.returncode == 0:
+                        log_progress("📦 Bluetooth packages installed successfully")
+                        subprocess.run(['systemctl', 'start', 'bluetooth'], capture_output=True, timeout=20)
+                        log_progress("✅ Bluetooth installed and started")
+                    else:
+                        log_progress(f"⚠️ Bluetooth installation had issues: {result.stderr[:200]}...")
+                        log_progress("⚠️ Continuing without Bluetooth")
+                    
+            except subprocess.TimeoutExpired:
+                log_progress("⚠️ Bluetooth installation timed out after 5 minutes")
+                log_progress("⚠️ This is normal on slow connections - continuing...")
             except Exception as e:
-                log_progress(f"⚠️ Bluetooth setup error: {e}")
+                log_progress(f"⚠️ Bluetooth setup error: {str(e)[:200]}...")
             log_progress("")
             
             # Step 5: Install missing firmware
-            log_progress("📦 STEP 5: Installing Network Firmware")
+            log_progress("📦 STEP 5: Installing Network Firmware", step=5)
             try:
                 firmware_packages = ["firmware-linux-nonfree", "firmware-realtek", 
                                    "firmware-atheros", "firmware-intel-sound"]
@@ -1038,26 +1071,82 @@ class MacaronApp:
                 available_packages = []
                 for package in firmware_packages:
                     try:
+                        log_progress(f"🔍 Checking {package}...")
                         result = subprocess.run(['apt', 'search', package], 
-                                              capture_output=True, text=True, timeout=10)
+                                              capture_output=True, text=True, timeout=15)
                         if package in result.stdout:
                             available_packages.append(package)
+                            log_progress(f"   ✅ {package} available")
                     except Exception:
+                        log_progress(f"   ⚠️ Could not check {package}")
                         continue
                 
                 if available_packages:
+                    log_progress(f"📥 Installing firmware packages (may take 2-3 minutes)...")
                     cmd = ['apt', 'install', '-y'] + available_packages
-                    subprocess.run(cmd, capture_output=True, timeout=180)
-                    log_progress(f"✅ Installed firmware: {', '.join(available_packages)}")
+                    result = subprocess.run(cmd, capture_output=True, timeout=300, text=True)  # 5 minutes
+                    
+                    if result.returncode == 0:
+                        log_progress(f"✅ Installed firmware: {', '.join(available_packages)}")
+                    else:
+                        log_progress(f"⚠️ Some firmware installation issues - continuing...")
                 else:
                     log_progress("⚠️ No additional firmware packages found")
                     
+            except subprocess.TimeoutExpired:
+                log_progress("⚠️ Firmware installation timed out - continuing...")
             except Exception as e:
-                log_progress(f"⚠️ Firmware installation warning: {e}")
+                log_progress(f"⚠️ Firmware installation warning: {str(e)[:200]}...")
             log_progress("")
             
-            # Step 6: Activate all network interfaces
-            log_progress("🌐 STEP 6: Activating All Network Interfaces")
+            # Step 6: Force WiFi interface detection
+            log_progress("📡 STEP 6: Force WiFi Interface Detection", step=6)
+            try:
+                log_progress("🔄 Scanning for WiFi hardware...")
+                
+                # Method 1: Check iwconfig output
+                try:
+                    result = subprocess.run(['iwconfig'], capture_output=True, text=True, timeout=10)
+                    wifi_interfaces = []
+                    for line in result.stdout.split('\n'):
+                        if 'IEEE 802.11' in line or 'ESSID:' in line:
+                            interface = line.split()[0]
+                            if interface and not interface.startswith('lo'):
+                                wifi_interfaces.append(interface)
+                    
+                    for wifi_iface in set(wifi_interfaces):
+                        log_progress(f"📡 Found WiFi interface: {wifi_iface}")
+                        try:
+                            subprocess.run(['ip', 'link', 'set', wifi_iface, 'up'], 
+                                         capture_output=True, timeout=5)
+                            log_progress(f"✅ Activated WiFi: {wifi_iface}")
+                        except Exception:
+                            log_progress(f"⚠️ Could not activate {wifi_iface}")
+                            
+                except Exception:
+                    log_progress("⚠️ iwconfig not available")
+                
+                # Method 2: Check for wlan interfaces in /sys/class/net
+                try:
+                    if os.path.exists("/sys/class/net"):
+                        for interface in os.listdir("/sys/class/net"):
+                            if interface.startswith(('wlan', 'wlp', 'wlx')):
+                                log_progress(f"📡 Found WiFi interface: {interface}")
+                                try:
+                                    subprocess.run(['ip', 'link', 'set', interface, 'up'], 
+                                                 capture_output=True, timeout=5)
+                                    log_progress(f"✅ Activated WiFi: {interface}")
+                                except Exception:
+                                    log_progress(f"⚠️ Could not activate {interface}")
+                except Exception:
+                    log_progress("⚠️ Could not scan /sys/class/net")
+                    
+            except Exception as e:
+                log_progress(f"⚠️ WiFi detection error: {e}")
+            log_progress("")
+            
+            # Step 7: Activate all network interfaces
+            log_progress("🌐 STEP 7: Activating All Network Interfaces", step=7)
             activated_interfaces = []
             
             # Find all available interfaces
@@ -1072,8 +1161,9 @@ class MacaronApp:
                         
                         try:
                             # Try to bring interface up
+                            log_progress(f"🔄 Activating {interface}...")
                             subprocess.run(['ip', 'link', 'set', 'dev', interface, 'up'], 
-                                         check=True, capture_output=True, timeout=5)
+                                         check=True, capture_output=True, timeout=10)
                             
                             # Get interface info
                             if os.path.exists(f"/sys/class/net/{interface}/address"):
@@ -1099,12 +1189,12 @@ class MacaronApp:
                 log_progress(f"❌ Error accessing network interfaces: {e}")
             log_progress("")
             
-            # Step 7: Activate Bluetooth interfaces
-            log_progress("📱 STEP 7: Activating Bluetooth Interfaces")
+            # Step 8: Activate Bluetooth interfaces
+            log_progress("📱 STEP 8: Activating Bluetooth Interfaces", step=8)
             bluetooth_found = False
             try:
                 # Try hciconfig approach
-                result = subprocess.run(['hciconfig'], capture_output=True, text=True, timeout=5)
+                result = subprocess.run(['hciconfig'], capture_output=True, text=True, timeout=10)
                 if result.returncode == 0 and result.stdout:
                     import re
                     for line in result.stdout.split('\n'):
@@ -1112,7 +1202,10 @@ class MacaronApp:
                         if match:
                             bt_interface = match.group(1)
                             try:
+                                log_progress(f"🔄 Activating {bt_interface}...")
                                 subprocess.run(['hciconfig', bt_interface, 'up'], 
+                                             capture_output=True, timeout=10)
+                                subprocess.run(['hciconfig', bt_interface, 'piscan'], 
                                              capture_output=True, timeout=5)
                                 log_progress(f"✅ Bluetooth: {bt_interface}")
                                 bluetooth_found = True
@@ -1137,8 +1230,8 @@ class MacaronApp:
                 log_progress(f"⚠️ Bluetooth activation error: {e}")
             log_progress("")
             
-            # Step 8: Restart network services
-            log_progress("🔄 STEP 8: Restarting Network Services")
+            # Final steps: Restart network services
+            log_progress("🔄 FINAL: Restarting Network Services")
             try:
                 # Restart NetworkManager
                 result = subprocess.run(['systemctl', 'is-active', 'NetworkManager'], 
@@ -1146,7 +1239,7 @@ class MacaronApp:
                 if result.returncode == 0:
                     log_progress("🔄 Restarting NetworkManager...")
                     subprocess.run(['systemctl', 'restart', 'NetworkManager'], 
-                                 capture_output=True, timeout=15)
+                                 capture_output=True, timeout=20)
                     log_progress("✅ NetworkManager restarted")
                 
                 # Restart wpa_supplicant if active
@@ -1154,7 +1247,7 @@ class MacaronApp:
                                       capture_output=True)
                 if result.returncode == 0:
                     subprocess.run(['systemctl', 'restart', 'wpa_supplicant'], 
-                                 capture_output=True, timeout=10)
+                                 capture_output=True, timeout=15)
                     log_progress("✅ wpa_supplicant restarted")
                     
             except Exception as e:
@@ -1162,6 +1255,8 @@ class MacaronApp:
             log_progress("")
             
             # Final summary
+            progress_bar['value'] = 100
+            progress_label.config(text="Complete!")
             log_progress("✅ ACTIVATION COMPLETE!")
             log_progress("=" * 50)
             total_interfaces = len(activated_interfaces) + (1 if bluetooth_found else 0)
@@ -1173,7 +1268,12 @@ class MacaronApp:
             if bluetooth_found:
                 log_progress(f"   • Bluetooth interfaces activated")
             log_progress("")
-            log_progress("🔄 Now click 'Scan Interfaces' to see all available interfaces!")
+            log_progress("🔄 Now click 'Close & Scan Interfaces' to see all available interfaces!")
+            log_progress("")
+            log_progress("💡 TIP: If WiFi still not visible, try:")
+            log_progress("   • Check if WiFi hardware is present: lspci | grep -i wireless")
+            log_progress("   • Manual activation: sudo ip link set wlan0 up")
+            log_progress("   • Alternative: nmcli device wifi list")
             
             # Add Close button
             button_frame = tk.Frame(progress_window)
@@ -1181,14 +1281,18 @@ class MacaronApp:
             
             def close_and_scan():
                 progress_window.destroy()
+                # Wait a moment for interfaces to settle
+                time.sleep(2)
                 self.scan_interfaces()
             
             tk.Button(button_frame, text="Close & Scan Interfaces", 
-                     command=close_and_scan, bg='lightgreen').pack(side=tk.LEFT, padx=5)
+                     command=close_and_scan, bg='lightgreen', font=('Arial', 10, 'bold')).pack(side=tk.LEFT, padx=5)
             tk.Button(button_frame, text="Close", 
-                     command=progress_window.destroy).pack(side=tk.LEFT, padx=5)
+                     command=progress_window.destroy, font=('Arial', 10)).pack(side=tk.LEFT, padx=5)
             
         except Exception as e:
+            progress_bar['value'] = 0
+            progress_label.config(text="Error!")
             log_progress(f"❌ CRITICAL ERROR: {e}")
             log_progress("Please check the logs and try manual activation.")
             messagebox.showerror("Error", f"Interface activation failed: {e}")
