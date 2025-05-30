@@ -31,7 +31,7 @@ jobs:
     - name: Run syntax checks
       run: |
         python -m py_compile main.py
-        python -c "import main; print('✅ main.py imports successfully')"
+        python -c "import main; print('✓ main.py imports successfully')"
         
     - name: Run comprehensive tests
       run: |
@@ -40,7 +40,7 @@ jobs:
     - name: Test installer syntax
       run: |
         bash -n install_all_in_one.sh
-        echo "✅ Installer script syntax OK"
+        echo "✓ Installer script syntax OK"
 
   compatibility-test:
     runs-on: ubuntu-latest
@@ -64,4 +64,4 @@ jobs:
         
     - name: Test import compatibility
       run: |
-        python -c "import main; print(f'✅ Python {python_version} compatibility OK')" python_version="${{ matrix.python-version }}" 
+        python -c "import main; print('✓ Python ${{ matrix.python-version }} compatibility OK')" 
