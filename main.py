@@ -1658,51 +1658,234 @@ class MacaronApp:
             
             wifi_found = False
             
-            # Method 1: Check iwconfig output
+            # Method 1: Liberate interfaces from NetworkManager first
             try:
-                result = subprocess.run(['iwconfig'], capture_output=True, text=True, timeout=10)
-                wifi_interfaces = []
-                for line in result.stdout.split('\n'):
-                    if 'IEEE 802.11' in line or 'ESSID:' in line:
-                        interface = line.split()[0]
-                        if interface and not interface.startswith('lo'):
-                            wifi_interfaces.append(interface)
+                log_progress("🔓 Liberating interfaces from NetworkManager...")
                 
-                for wifi_iface in set(wifi_interfaces):
-                    log_progress(f"📡 Found WiFi interface: {wifi_iface}")
-                    try:
-                        sub_status_label.config(text=f"Activating {wifi_iface}...")
-                        progress_window.update()
-                        subprocess.run(['ip', 'link', 'set', wifi_iface, 'up'], capture_output=True, timeout=5)
-                        log_progress(f"✅ Activated WiFi: {wifi_iface}")
-                        wifi_found = True
-                    except Exception:
-                        log_progress(f"⚠️ Could not activate {wifi_iface}")
-                        
-            except Exception:
-                log_progress("⚠️ iwconfig not available")
+                # Get list of managed interfaces
+                result = subprocess.run(['nmcli', 'device', 'status'], capture_output=True, text=True)
+                if result.returncode == 0:
+                    managed_interfaces = []
+                    for line in result.stdout.split('\n')[1:]:  # Skip header
+                        if line.strip():
+                            parts = line.split()
+                            if len(parts) >= 3:
+                                interface = parts[0]
+                                state = parts[2] if len(parts) > 2 else ""
+                                if any(interface.startswith(prefix) for prefix in ['wl', 'wlan', 'wlp']):
+                                    managed_interfaces.append(interface)
+                                    log_progress(f"📶 Found managed WiFi: {interface} (state: {state})")
+                    
+                    # Temporarily unmanage WiFi interfaces
+                    for interface in managed_interfaces:
+                        try:
+                            sub_status_label.config(text=f"Unmanaging {interface}...")
+                            progress_window.update()
+                            subprocess.run(['nmcli', 'device', 'set', interface, 'managed', 'no'], 
+                                         capture_output=True, timeout=10)
+                            log_progress(f"🔓 Unmanaged {interface} from NetworkManager")
+                            time.sleep(1)
+                        except Exception:
+                            log_progress(f"⚠️ Could not unmanage {interface}")
+                            
+            except subprocess.CalledProcessError:
+                log_progress("⚠️ nmcli not available - skipping NetworkManager liberation")
             
-            # Method 2: Check for wlan interfaces in /sys/class/net
+            # Method 2: Stop interfering services temporarily
             try:
-                if os.path.exists("/sys/class/net"):
-                    for interface in os.listdir("/sys/class/net"):
-                        if interface.startswith(('wlan', 'wlp', 'wlx')):
-                            log_progress(f"📡 Found WiFi interface: {interface}")
-                            try:
-                                sub_status_label.config(text=f"Activating {interface}...")
-                                progress_window.update()
-                                subprocess.run(['ip', 'link', 'set', interface, 'up'], capture_output=True, timeout=5)
-                                log_progress(f"✅ Activated WiFi: {interface}")
+                log_progress("⏸️ Temporarily stopping interfering services...")
+                
+                services_to_stop = ['wpa_supplicant', 'NetworkManager', 'connman']
+                stopped_services = []
+                
+                for service in services_to_stop:
+                    try:
+                        # Check if service is active
+                        result = subprocess.run(['systemctl', 'is-active', service], 
+                                              capture_output=True, text=True)
+                        if result.returncode == 0:  # Service is active
+                            sub_status_label.config(text=f"Stopping {service}...")
+                            progress_window.update()
+                            
+                            subprocess.run(['systemctl', 'stop', service], 
+                                         capture_output=True, timeout=15)
+                            stopped_services.append(service)
+                            log_progress(f"⏸️ Stopped {service}")
+                            time.sleep(2)  # Let service fully stop
+                    except Exception:
+                        pass
+                
+                log_progress(f"⏸️ Stopped {len(stopped_services)} interfering services")
+                
+            except Exception as e:
+                log_progress(f"⚠️ Service management warning: {str(e)[:100]}...")
+            
+            # Method 3: Force hardware detection with multiple approaches
+            try:
+                log_progress("🔍 Scanning WiFi hardware with multiple methods...")
+                
+                # Approach 1: Direct hardware scan via lspci
+                try:
+                    result = subprocess.run(['lspci'], capture_output=True, text=True)
+                    wifi_hw_found = False
+                    for line in result.stdout.split('\n'):
+                        if any(keyword in line.lower() for keyword in 
+                              ['wireless', 'wifi', '802.11', 'wlan', 'atheros', 'intel', 'broadcom', 'realtek']):
+                            log_progress(f"🔍 WiFi Hardware: {line.strip()}")
+                            wifi_hw_found = True
+                    
+                    if wifi_hw_found:
+                        log_progress("✅ WiFi hardware detected - proceeding with interface activation")
+                    else:
+                        log_progress("⚠️ No WiFi hardware found in PCI scan")
+                        
+                except Exception:
+                    log_progress("⚠️ Could not scan PCI hardware")
+                    
+                # Approach 2: Kernel module based detection
+                try:
+                    result = subprocess.run(['lsmod'], capture_output=True, text=True)
+                    wifi_modules = []
+                    for line in result.stdout.split('\n'):
+                        module_name = line.split()[0] if line.strip() else ""
+                        if any(module_name.startswith(prefix) for prefix in 
+                              ['iwl', 'ath', 'rt2', 'rtl', 'brcm', 'mt7']):
+                            wifi_modules.append(module_name)
+                            log_progress(f"📡 WiFi module loaded: {module_name}")
+                    
+                    if wifi_modules:
+                        log_progress(f"✅ Found {len(wifi_modules)} WiFi kernel modules")
+                    else:
+                        log_progress("⚠️ No WiFi kernel modules detected")
+                        
+                except Exception:
+                    log_progress("⚠️ Could not scan kernel modules")
+                    
+                # Approach 3: Scan /sys/class/net with DOWN interfaces
+                interfaces_found = []
+                try:
+                    if os.path.exists("/sys/class/net"):
+                        for interface in os.listdir("/sys/class/net"):
+                            if any(interface.startswith(prefix) for prefix in ['wl', 'wlan', 'wlp', 'wlx']):
+                                try:
+                                    # Check if interface exists but is down
+                                    operstate_file = f"/sys/class/net/{interface}/operstate"
+                                    if os.path.exists(operstate_file):
+                                        with open(operstate_file, 'r') as f:
+                                            state = f.read().strip()
+                                        
+                                            # Get MAC address
+                                            with open(f"/sys/class/net/{interface}/address", 'r') as f:
+                                                mac = f.read().strip()
+                                        
+                                                interfaces_found.append((interface, mac, state))
+                                                log_progress(f"📶 Found WiFi interface: {interface} - MAC: {mac} - State: {state}")
+                                        
+                                except Exception:
+                                    continue
+                                    
+                    log_progress(f"🔍 Found {len(interfaces_found)} WiFi interfaces in sysfs")
+                    
+                except Exception:
+                    log_progress("⚠️ Could not scan /sys/class/net")
+                    
+                # Approach 4: Force UP any found WiFi interfaces
+                for interface, mac, state in interfaces_found:
+                    try:
+                        sub_status_label.config(text=f"Activating {interface}...")
+                        progress_window.update()
+                        
+                        # Force interface UP
+                        log_progress(f"🔄 Forcing {interface} UP...")
+                        subprocess.run(['ip', 'link', 'set', interface, 'up'], 
+                                     capture_output=True, timeout=10)
+                        
+                        # Verify it's up
+                        time.sleep(2)
+                        result = subprocess.run(['ip', 'link', 'show', interface], 
+                                              capture_output=True, text=True)
+                        if 'UP' in result.stdout:
+                            log_progress(f"✅ Successfully activated WiFi: {interface}")
+                            wifi_found = True
+                        else:
+                            log_progress(f"⚠️ {interface} still DOWN after activation attempt")
+                            
+                    except Exception as e:
+                        log_progress(f"⚠️ Could not activate {interface}: {str(e)[:50]}...")
+                    
+                # Approach 5: iw/iwconfig scan as last resort
+                try:
+                    # Try iw first (newer tool)
+                    for interface, mac, state in interfaces_found:
+                        try:
+                            result = subprocess.run(['iw', 'dev', interface, 'scan'], 
+                                                  capture_output=True, text=True, timeout=15)
+                            if result.returncode == 0:
+                                log_progress(f"📡 {interface} scan successful - interface is functional")
                                 wifi_found = True
+                            else:
+                                log_progress(f"⚠️ {interface} scan failed - may need firmware")
+                        except Exception:
+                            # Try iwconfig as fallback
+                            try:
+                                result = subprocess.run(['iwconfig', interface], 
+                                                      capture_output=True, text=True)
+                                if 'IEEE 802.11' in result.stdout:
+                                    log_progress(f"📡 {interface} detected via iwconfig")
+                                    wifi_found = True
                             except Exception:
-                                log_progress(f"⚠️ Could not activate {interface}")
-            except Exception:
-                log_progress("⚠️ Could not scan /sys/class/net")
-            
+                                pass
+                                
+                except Exception:
+                    log_progress("⚠️ Could not perform wireless scan")
+                    
+            except Exception as e:
+                log_progress(f"⚠️ WiFi detection error: {str(e)[:100]}...")
+                
+            # Method 4: Restart services we stopped
+            try:
+                log_progress("🔄 Restarting network services...")
+                
+                # Restart stopped services in reverse order
+                for service in reversed(stopped_services):
+                    try:
+                        sub_status_label.config(text=f"Restarting {service}...")
+                        progress_window.update()
+                        
+                        subprocess.run(['systemctl', 'start', service], 
+                                     capture_output=True, timeout=20)
+                        log_progress(f"▶️ Restarted {service}")
+                        time.sleep(2)
+                    except Exception:
+                        log_progress(f"⚠️ Could not restart {service}")
+                    
+                # Re-manage interfaces in NetworkManager
+                try:
+                    if 'NetworkManager' in stopped_services:
+                        time.sleep(3)  # Let NetworkManager start
+                        for interface in managed_interfaces:
+                            try:
+                                subprocess.run(['nmcli', 'device', 'set', interface, 'managed', 'yes'], 
+                                             capture_output=True, timeout=10)
+                                log_progress(f"🔗 Re-managed {interface} in NetworkManager")
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+                    
+            except Exception as e:
+                log_progress(f"⚠️ Service restart warning: {str(e)[:100]}...")
+                
             if not wifi_found:
-                log_progress("⚠️ No WiFi interfaces detected")
-                log_progress("💡 This may be normal if no WiFi hardware is present")
-            
+                log_progress("⚠️ No functional WiFi interfaces detected")
+                log_progress("💡 This may be due to:")
+                log_progress("   • Missing WiFi drivers/firmware")
+                log_progress("   • Hardware disabled in BIOS")
+                log_progress("   • USB WiFi adapter not connected")
+                log_progress("   • Interface in rfkill blocked state")
+            else:
+                log_progress("🎉 WiFi interfaces successfully detected and activated!")
+                
             sub_status_label.config(text="")
             log_progress("")
             
@@ -1751,7 +1934,7 @@ class MacaronApp:
                             
             except Exception as e:
                 log_progress(f"❌ Error accessing network interfaces: {e}")
-            
+                
             sub_status_label.config(text="")
             log_progress("")
             
@@ -1800,7 +1983,7 @@ class MacaronApp:
                     
             except Exception as e:
                 log_progress(f"⚠️ Bluetooth activation error: {str(e)[:100]}...")
-            
+                
             sub_status_label.config(text="")
             log_progress("")
             
