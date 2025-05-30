@@ -1,0 +1,18 @@
+# MACARON - MAC Address Randomization Tool
+# Python Dependencies
+
+# Most dependencies are built-in to Python standard library
+# This file is provided for completeness and future extensions
+
+# Core GUI framework (usually pre-installed)
+# tkinter  # Built-in with Python
+
+# For potential future enhancements:
+# psutil>=5.8.0  # For advanced system monitoring
+# cryptography>=3.4.8  # For enhanced security features
+# schedule>=1.1.0  # For advanced scheduling options
+
+# Development and testing dependencies (optional):
+# pytest>=6.2.4
+# pylint>=2.8.2
+# black>=21.5b1 

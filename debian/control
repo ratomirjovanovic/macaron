@@ -1,0 +1,30 @@
+Package: macaron
+Version: 1.0
+Section: net
+Priority: optional
+Architecture: all
+Depends: python3 (>= 3.6), python3-tk, iproute2
+Maintainer: Ratomir Jovanovic <contact@ratomir.com>
+Homepage: https://ratomir.com
+Description: MAC Address Randomization Tool for Privacy Enhancement
+ MACARON is a comprehensive, enterprise-grade MAC address randomization
+ application designed to enhance privacy and security on Linux systems.
+ .
+ The application provides both manual and automatic MAC address randomization
+ with a modern graphical interface, comprehensive logging, and robust security
+ features.
+ .
+ Key Features:
+  * Real-time network interface detection and monitoring
+  * Secure cryptographic MAC address generation
+  * Automatic scheduling with customizable intervals (1-1440 minutes)
+  * Original MAC address backup and restoration
+  * Comprehensive security audit logging
+  * Modern, intuitive GUI built with tkinter
+  * Root privilege management with secure sudo handling
+  * Cross-interface support (Ethernet, WiFi, etc.)
+  * Virtual interface filtering for safety
+ .
+ This tool is designed for privacy-conscious users, security professionals,
+ penetration testers, and enterprises requiring MAC address randomization
+ for compliance or security purposes. 

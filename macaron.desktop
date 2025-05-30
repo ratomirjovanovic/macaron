@@ -1,0 +1,23 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=MACARON
+GenericName=MAC Address Randomizer
+Comment=Secure MAC address randomization tool for privacy enhancement
+Keywords=mac;address;randomizer;privacy;security;network;
+Icon=network-wired
+Exec=pkexec /usr/bin/env bash -c 'cd "%k" && python3 main.py'
+Path=/path/to/MACARON
+Terminal=false
+StartupNotify=true
+Categories=System;Security;Network;
+MimeType=
+StartupWMClass=MACARON
+X-GNOME-Autostart-enabled=false
+
+# Security settings
+X-GNOME-UsesNotifications=true
+X-Ubuntu-Touch=false
+
+# Additional metadata
+X-AppStream-Ignore=false 
