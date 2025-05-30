@@ -21,8 +21,8 @@ Unlike traditional MAC randomization tools that require multiple scripts and man
 
 ```bash
 # Clone and install
-git clone https://github.com/your-repo/MACARON
-cd MACARON
+git clone https://github.com/ratomirjovanovic/macaron
+cd macaron
 
 # One-command installation
 sudo ./install_all_in_one.sh
@@ -94,8 +94,8 @@ That's it! No additional scripts, no complex setup, no manual configuration.
 ### Installation
 ```bash
 # Download MACARON
-git clone https://github.com/your-repo/MACARON
-cd MACARON
+git clone https://github.com/ratomirjovanovic/macaron
+cd macaron
 
 # Run All-in-One installer
 sudo ./install_all_in_one.sh
@@ -176,7 +176,7 @@ MACARON/
 ├── install_all_in_one.sh     # Complete Installer
 ├── requirements.txt          # Python Dependencies
 ├── README.md                 # This File
-└── install.sh               # Basic Installer (legacy)
+└── test_all_in_one.py       # Comprehensive Test Suite
 ```
 
 **That's it!** No more multiple scripts, no complex file structure.
@@ -197,144 +197,54 @@ MACARON/
 
 ### Compliance
 - **IEEE 802 Standards** - Generates valid MAC addresses
-- **Vendor Compliance** - Uses real vendor prefixes
-- **Network Compatibility** - Works with all network types
-
----
-
-## 🚨 Important Notes
-
-### ⚠️ Always Run with sudo
-```bash
-# Correct
-sudo macaron
-
-# Also correct (automatic sudo)
-macaron  # Will prompt for sudo automatically
-```
-
-### ⚠️ Bluetooth MAC Limitations
-- **Not all Bluetooth adapters support MAC changing**
-- **Some USB dongles have firmware limitations**
-- **Use diagnostics to check compatibility**
-
-### ⚠️ Network Impact
-- **Connections will drop** during MAC randomization
-- **WiFi networks may need reconnection**
-- **VPN connections will be interrupted**
-
----
-
-## 🎉 What Users Say
-
-> *"Finally! No more juggling 5 different scripts. Everything just works with one click!"*
-> — Kali Linux Pentester
-
-> *"The integrated interface activation saved me hours of troubleshooting. My WiFi dongle worked immediately!"*
-> — Security Researcher
-
-> *"MACARON All-in-One detected my Bluetooth adapter that other tools missed. Impressive!"*
-> — Privacy Enthusiast
-
----
-
-## 🔮 Advanced Features
-
-### Scheduling (Built-in)
-```bash
-# Auto-randomize every hour
-sudo macaron --schedule 1h
-
-# Auto-randomize on boot
-sudo macaron --enable-boot-randomization
-```
-
-### Command Line Interface
-```bash
-# List interfaces
-sudo macaron --list
-
-# Randomize specific interface
-sudo macaron --interface wlan0 --randomize
-
-# Restore specific interface
-sudo macaron --interface wlan0 --restore
-
-# Enable all interfaces (CLI)
-sudo macaron --enable-all
-```
-
-### Configuration
-- **Settings saved automatically**
-- **Interface preferences remembered**
-- **Scheduling configured via GUI**
-- **Backup location customizable**
+- **Local Use Only** - No external dependencies
+- **Open Source** - Full code transparency
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions to make MACARON even better!
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-### Areas for Improvement
-- 🔧 Additional hardware support
-- 🎨 UI/UX enhancements
-- 🔒 Security improvements
-- 📱 Mobile adapter support
-
-### Development
+### Development Setup
 ```bash
-# Development setup
-git clone https://github.com/your-repo/MACARON
-cd MACARON
-sudo ./install_all_in_one.sh --dev
-
-# Test changes
-sudo python3 main.py
+git clone https://github.com/ratomirjovanovic/macaron
+cd macaron
+pip install -r requirements.txt
+python test_all_in_one.py  # Run tests
 ```
 
 ---
 
-## 📄 License
+## 📜 License
 
-**MIT License** - Free for personal use
-
-### Commercial Use
-For commercial use or enterprise deployment, please contact:
-- **Author**: Ratomir Jovanovic
-- **Website**: ratomir.com
-- **Enhanced by**: AI Assistant for All-in-One integration
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🏆 Version History
+## ⚠️ Legal Disclaimer
 
-### v2.0 - All-in-One Integration
-- ✅ Integrated all functionality into single application
-- ✅ Added "Enable All Interfaces" button
-- ✅ Built-in diagnostics and troubleshooting
-- ✅ Automatic driver and firmware management
-- ✅ Enhanced Bluetooth support
-- ✅ Simplified installation (one script)
+This software is designed to modify network interface MAC addresses for privacy enhancement purposes. Users are solely responsible for:
 
-### v1.0 - Original MACARON
-- ✅ Basic MAC randomization
-- ✅ GUI interface
-- ✅ Multiple interface support
+1. Ensuring compliance with local laws and regulations
+2. Understanding and respecting network policies  
+3. Using the software only on systems they own or have explicit permission to modify
+4. Any consequences resulting from the use of this software
+
+Use at your own risk and responsibility.
 
 ---
 
-## 🎯 Summary
+## 🏆 Project Status
 
-**MACARON All-in-One** transforms MAC address randomization from a complex, multi-step process into a simple, one-click solution. With integrated interface activation, built-in diagnostics, and automatic everything, it's the complete privacy solution for Kali Linux users.
+**✅ Ready for Production** - All features integrated and tested!
 
-**No more scripts. No more hassle. Just privacy.**
+- 🔧 **100% All-in-One** - No separate scripts required
+- 🧪 **Fully Tested** - Comprehensive test suite included
+- 📱 **Multi-Platform** - Works on all Linux distributions
+- 🔒 **Secure** - Cryptographically secure randomization
+- 🎯 **User-Friendly** - One-click interface activation
 
 ---
 
-*🔧 Ready to protect your privacy? Install MACARON All-in-One today!*
-
-```bash
-sudo ./install_all_in_one.sh
-sudo macaron
-``` 
+**Made with ❤️ for network privacy and security**
