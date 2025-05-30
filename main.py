@@ -112,115 +112,454 @@ class MacaronApp:
         self.logger.info(f"Log file created/opened with secure permissions: {log_file}")
     
     def configure_styles(self):
-        """Configure modern styling for the application"""
+        """Configure modern styling for the application - Enhanced Modern Theme"""
         style = ttk.Style()
-        style.theme_use('clam')
         
-        # Configure colors for modern look
-        style.configure('Header.TLabel', font=('Arial', 14, 'bold'))
-        style.configure('Success.TLabel', foreground='green')
-        style.configure('Warning.TLabel', foreground='orange')
-        style.configure('Error.TLabel', foreground='red')
+        # Choose a modern theme base
+        try:
+            style.theme_use('clam')
+        except:
+            style.theme_use('default')
+        
+        # Modern Color Palette
+        self.colors = {
+            'bg_primary': '#1e1e2e',      # Dark background
+            'bg_secondary': '#313244',    # Secondary dark
+            'bg_tertiary': '#45475a',     # Tertiary dark
+            'accent_primary': '#89b4fa',  # Blue accent
+            'accent_success': '#a6e3a1',  # Green success
+            'accent_warning': '#f9e2af',  # Yellow warning
+            'accent_error': '#f38ba8',    # Red error
+            'text_primary': '#cdd6f4',    # Light text
+            'text_secondary': '#bac2de',  # Secondary text
+            'text_muted': '#9399b2',      # Muted text
+            'border': '#6c7086',          # Border color
+            'shadow': '#11111b'           # Shadow color
+        }
+        
+        # Configure ttk styles with modern colors
+        style.configure('Modern.TFrame', 
+                       background=self.colors['bg_primary'],
+                       borderwidth=0)
+        
+        style.configure('Card.TFrame', 
+                       background=self.colors['bg_secondary'],
+                       relief='flat',
+                       borderwidth=1)
+        
+        style.configure('Header.TLabel', 
+                       background=self.colors['bg_primary'],
+                       foreground=self.colors['accent_primary'],
+                       font=('Segoe UI', 18, 'bold'))
+        
+        style.configure('Subheader.TLabel', 
+                       background=self.colors['bg_primary'],
+                       foreground=self.colors['text_primary'],
+                       font=('Segoe UI', 12, 'bold'))
+        
+        style.configure('Modern.TLabel', 
+                       background=self.colors['bg_primary'],
+                       foreground=self.colors['text_primary'],
+                       font=('Segoe UI', 10))
+        
+        style.configure('Success.TLabel', 
+                       background=self.colors['bg_primary'],
+                       foreground=self.colors['accent_success'],
+                       font=('Segoe UI', 10, 'bold'))
+        
+        style.configure('Warning.TLabel', 
+                       background=self.colors['bg_primary'],
+                       foreground=self.colors['accent_warning'],
+                       font=('Segoe UI', 10, 'bold'))
+        
+        style.configure('Error.TLabel', 
+                       background=self.colors['bg_primary'],
+                       foreground=self.colors['accent_error'],
+                       font=('Segoe UI', 10, 'bold'))
+        
+        # Modern button styles
+        style.configure('Modern.TButton',
+                       background=self.colors['accent_primary'],
+                       foreground='white',
+                       borderwidth=0,
+                       focuscolor='none',
+                       font=('Segoe UI', 10, 'bold'),
+                       padding=(20, 10))
+        
+        style.map('Modern.TButton',
+                 background=[('active', self.colors['accent_primary']),
+                           ('pressed', '#74c0fc')])
+        
+        style.configure('Success.TButton',
+                       background=self.colors['accent_success'],
+                       foreground='white',
+                       borderwidth=0,
+                       focuscolor='none',
+                       font=('Segoe UI', 10, 'bold'),
+                       padding=(20, 10))
+        
+        style.configure('Warning.TButton',
+                       background=self.colors['accent_warning'],
+                       foreground='black',
+                       borderwidth=0,
+                       focuscolor='none',
+                       font=('Segoe UI', 10, 'bold'),
+                       padding=(20, 10))
+        
+        style.configure('Danger.TButton',
+                       background=self.colors['accent_error'],
+                       foreground='white',
+                       borderwidth=0,
+                       focuscolor='none',
+                       font=('Segoe UI', 10, 'bold'),
+                       padding=(20, 10))
+        
+        # Modern treeview
+        style.configure('Modern.Treeview',
+                       background=self.colors['bg_secondary'],
+                       foreground=self.colors['text_primary'],
+                       fieldbackground=self.colors['bg_secondary'],
+                       borderwidth=0,
+                       font=('Segoe UI', 10))
+        
+        style.configure('Modern.Treeview.Heading',
+                       background=self.colors['bg_tertiary'],
+                       foreground=self.colors['text_primary'],
+                       borderwidth=0,
+                       font=('Segoe UI', 11, 'bold'))
+        
+        # Modern progress bar
+        style.configure('Modern.Horizontal.TProgressbar',
+                       background=self.colors['accent_primary'],
+                       troughcolor=self.colors['bg_tertiary'],
+                       borderwidth=0,
+                       lightcolor=self.colors['accent_primary'],
+                       darkcolor=self.colors['accent_primary'])
+        
+        # Modern spinbox and entry
+        style.configure('Modern.TSpinbox',
+                       fieldbackground=self.colors['bg_secondary'],
+                       background=self.colors['bg_secondary'],
+                       foreground=self.colors['text_primary'],
+                       borderwidth=1,
+                       insertcolor=self.colors['text_primary'])
+        
+        # Modern labelframe
+        style.configure('Modern.TLabelframe',
+                       background=self.colors['bg_primary'],
+                       borderwidth=1,
+                       relief='flat')
+        
+        style.configure('Modern.TLabelframe.Label',
+                       background=self.colors['bg_primary'],
+                       foreground=self.colors['accent_primary'],
+                       font=('Segoe UI', 12, 'bold'))
     
     def create_widgets(self):
-        """Create the main GUI interface"""
-        # Main frame
-        main_frame = ttk.Frame(self.root, padding="10")
+        """Create the modern GUI interface"""
+        # Set window background
+        self.root.configure(bg=self.colors['bg_primary'])
+        
+        # Main frame with modern styling
+        main_frame = tk.Frame(self.root, bg=self.colors['bg_primary'], padx=20, pady=20)
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # Configure grid weights
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=1)
+        main_frame.columnconfigure(0, weight=1)
         
-        # Title
-        title_label = ttk.Label(main_frame, text="MACARON - MAC Address Randomizer", 
-                               style='Header.TLabel')
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
+        # Modern header with gradient effect
+        header_frame = tk.Frame(main_frame, bg=self.colors['bg_primary'], height=80)
+        header_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 20))
+        header_frame.columnconfigure(0, weight=1)
         
-        # Interface list frame
-        interface_frame = ttk.LabelFrame(main_frame, text="Network Interfaces", padding="10")
-        interface_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
-        interface_frame.columnconfigure(0, weight=1)
+        # Title with modern styling
+        title_label = tk.Label(header_frame, 
+                              text="🎯 MACARON", 
+                              bg=self.colors['bg_primary'],
+                              fg=self.colors['accent_primary'],
+                              font=('Segoe UI', 24, 'bold'))
+        title_label.grid(row=0, column=0)
         
-        # Treeview for interfaces
+        subtitle_label = tk.Label(header_frame, 
+                                 text="Advanced MAC Address Randomization Tool",
+                                 bg=self.colors['bg_primary'],
+                                 fg=self.colors['text_secondary'],
+                                 font=('Segoe UI', 12))
+        subtitle_label.grid(row=1, column=0, pady=(5, 0))
+        
+        # Status indicator
+        self.status_frame = tk.Frame(header_frame, bg=self.colors['bg_primary'])
+        self.status_frame.grid(row=0, column=1, rowspan=2, padx=(20, 0))
+        
+        self.status_indicator = tk.Label(self.status_frame,
+                                        text="🟢",
+                                        bg=self.colors['bg_primary'],
+                                        font=('Segoe UI', 16))
+        self.status_indicator.grid(row=0, column=0)
+        
+        self.status_text = tk.Label(self.status_frame,
+                                   text="Ready",
+                                   bg=self.colors['bg_primary'],
+                                   fg=self.colors['accent_success'],
+                                   font=('Segoe UI', 10, 'bold'))
+        self.status_text.grid(row=1, column=0)
+        
+        # Interface list frame - Modern card design
+        interface_card = tk.Frame(main_frame, bg=self.colors['bg_secondary'], 
+                                 relief='flat', bd=1)
+        interface_card.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 20))
+        interface_card.columnconfigure(0, weight=1)
+        
+        # Card header
+        card_header = tk.Frame(interface_card, bg=self.colors['bg_tertiary'], height=50)
+        card_header.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=1, pady=1)
+        card_header.columnconfigure(0, weight=1)
+        
+        interface_title = tk.Label(card_header,
+                                  text="🌐 Network Interfaces",
+                                  bg=self.colors['bg_tertiary'],
+                                  fg=self.colors['text_primary'],
+                                  font=('Segoe UI', 14, 'bold'))
+        interface_title.grid(row=0, column=0, padx=20, pady=15, sticky=tk.W)
+        
+        # Interface count badge
+        self.interface_count = tk.Label(card_header,
+                                       text="0",
+                                       bg=self.colors['accent_primary'],
+                                       fg='white',
+                                       font=('Segoe UI', 10, 'bold'),
+                                       padx=10, pady=5)
+        self.interface_count.grid(row=0, column=1, padx=20, pady=15, sticky=tk.E)
+        
+        # Treeview container
+        tree_container = tk.Frame(interface_card, bg=self.colors['bg_secondary'])
+        tree_container.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=20, pady=(0, 20))
+        tree_container.columnconfigure(0, weight=1)
+        tree_container.rowconfigure(0, weight=1)
+        
+        # Modern treeview
         columns = ('Interface', 'Current MAC', 'Original MAC', 'Status')
-        self.tree = ttk.Treeview(interface_frame, columns=columns, show='headings', height=8)
+        self.tree = ttk.Treeview(tree_container, columns=columns, show='headings', 
+                                height=8, style='Modern.Treeview')
         
-        for col in columns:
-            self.tree.heading(col, text=col)
-            self.tree.column(col, width=150)
+        # Configure columns with modern headers
+        column_configs = {
+            'Interface': {'width': 200, 'text': '🔌 Interface'},
+            'Current MAC': {'width': 150, 'text': '🏷️ Current MAC'},
+            'Original MAC': {'width': 150, 'text': '🔄 Original MAC'},
+            'Status': {'width': 120, 'text': '📊 Status'}
+        }
+        
+        for col, config in column_configs.items():
+            self.tree.heading(col, text=config['text'])
+            self.tree.column(col, width=config['width'])
         
         self.tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # Scrollbar for treeview
-        scrollbar = ttk.Scrollbar(interface_frame, orient=tk.VERTICAL, command=self.tree.yview)
+        # Modern scrollbar
+        scrollbar = ttk.Scrollbar(tree_container, orient=tk.VERTICAL, command=self.tree.yview)
         scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
         self.tree.configure(yscrollcommand=scrollbar.set)
         
-        # Control buttons frame
-        button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=2, column=0, columnspan=3, pady=(0, 10))
+        # Modern control buttons
+        button_frame = tk.Frame(main_frame, bg=self.colors['bg_primary'])
+        button_frame.grid(row=2, column=0, pady=(0, 20))
         
-        ttk.Button(button_frame, text="Scan Interfaces", 
-                  command=self.scan_interfaces).grid(row=0, column=0, padx=(0, 5))
-        ttk.Button(button_frame, text="Enable All Interfaces", 
-                  command=self.enable_all_interfaces).grid(row=0, column=1, padx=5)
-        ttk.Button(button_frame, text="Randomize Selected", 
-                  command=self.randomize_selected).grid(row=0, column=2, padx=5)
-        ttk.Button(button_frame, text="Randomize All", 
-                  command=self.randomize_all).grid(row=0, column=3, padx=5)
-        ttk.Button(button_frame, text="Restore Original", 
-                  command=self.restore_original).grid(row=0, column=4, padx=5)
-        ttk.Button(button_frame, text="Diagnostics", 
-                  command=self.run_diagnostics).grid(row=0, column=5, padx=(5, 0))
+        # Button configurations with icons and colors
+        button_configs = [
+            {"text": "🔍 Scan", "command": self.scan_interfaces, "style": "Modern.TButton"},
+            {"text": "⚡ Enable All", "command": self.enable_all_interfaces, "style": "Warning.TButton"},
+            {"text": "🎲 Random Selected", "command": self.randomize_selected, "style": "Success.TButton"},
+            {"text": "🎯 Random All", "command": self.randomize_all, "style": "Success.TButton"},
+            {"text": "🔄 Restore", "command": self.restore_original, "style": "Modern.TButton"},
+            {"text": "🔧 Diagnostics", "command": self.run_diagnostics, "style": "Modern.TButton"}
+        ]
         
-        # Auto-randomization frame
-        auto_frame = ttk.LabelFrame(main_frame, text="Automatic Randomization", padding="10")
-        auto_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        for i, config in enumerate(button_configs):
+            btn = ttk.Button(button_frame, **config)
+            btn.grid(row=0, column=i, padx=8, pady=5)
         
-        ttk.Label(auto_frame, text="Interval (minutes):").grid(row=0, column=0, padx=(0, 5))
+        # Auto-randomization card
+        auto_card = tk.Frame(main_frame, bg=self.colors['bg_secondary'], relief='flat', bd=1)
+        auto_card.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=(0, 20))
+        auto_card.columnconfigure(1, weight=1)
+        
+        # Auto card header
+        auto_header = tk.Frame(auto_card, bg=self.colors['bg_tertiary'])
+        auto_header.grid(row=0, column=0, columnspan=4, sticky=(tk.W, tk.E), padx=1, pady=1)
+        
+        auto_title = tk.Label(auto_header,
+                             text="⏰ Automatic Randomization",
+                             bg=self.colors['bg_tertiary'],
+                             fg=self.colors['text_primary'],
+                             font=('Segoe UI', 14, 'bold'))
+        auto_title.grid(row=0, column=0, padx=20, pady=15, sticky=tk.W)
+        
+        # Auto controls
+        auto_controls = tk.Frame(auto_card, bg=self.colors['bg_secondary'])
+        auto_controls.grid(row=1, column=0, columnspan=4, padx=20, pady=20, sticky=(tk.W, tk.E))
+        
+        interval_label = tk.Label(auto_controls,
+                                 text="⏱️ Interval (minutes):",
+                                 bg=self.colors['bg_secondary'],
+                                 fg=self.colors['text_primary'],
+                                 font=('Segoe UI', 11))
+        interval_label.grid(row=0, column=0, padx=(0, 15), sticky=tk.W)
         
         self.interval_var = tk.StringVar(value="15")
-        interval_spinbox = ttk.Spinbox(auto_frame, from_=1, to=1440, width=10, 
-                                     textvariable=self.interval_var)
-        interval_spinbox.grid(row=0, column=1, padx=(0, 10))
+        interval_spinbox = ttk.Spinbox(auto_controls, from_=1, to=1440, width=10,
+                                     textvariable=self.interval_var,
+                                     style='Modern.TSpinbox',
+                                     font=('Segoe UI', 10))
+        interval_spinbox.grid(row=0, column=1, padx=(0, 20))
         
-        self.auto_button = ttk.Button(auto_frame, text="Start Auto-Randomization", 
-                                     command=self.toggle_auto_randomization)
-        self.auto_button.grid(row=0, column=2, padx=(0, 10))
+        self.auto_button = ttk.Button(auto_controls, 
+                                     text="▶️ Start Auto-Randomization",
+                                     command=self.toggle_auto_randomization,
+                                     style='Success.TButton')
+        self.auto_button.grid(row=0, column=2, padx=(0, 20))
         
-        self.auto_status_label = ttk.Label(auto_frame, text="Stopped")
-        self.auto_status_label.grid(row=0, column=3)
+        # Auto status with modern indicator
+        auto_status_frame = tk.Frame(auto_controls, bg=self.colors['bg_secondary'])
+        auto_status_frame.grid(row=0, column=3, sticky=tk.E)
         
-        # Log frame
-        log_frame = ttk.LabelFrame(main_frame, text="Activity Log", padding="10")
-        log_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
-        log_frame.columnconfigure(0, weight=1)
-        log_frame.rowconfigure(0, weight=1)
+        self.auto_status_indicator = tk.Label(auto_status_frame,
+                                             text="⏹️",
+                                             bg=self.colors['bg_secondary'],
+                                             font=('Segoe UI', 14))
+        self.auto_status_indicator.grid(row=0, column=0)
         
-        self.log_text = scrolledtext.ScrolledText(log_frame, height=8, width=80)
+        self.auto_status_label = tk.Label(auto_status_frame,
+                                         text="Stopped",
+                                         bg=self.colors['bg_secondary'],
+                                         fg=self.colors['text_muted'],
+                                         font=('Segoe UI', 10, 'bold'))
+        self.auto_status_label.grid(row=0, column=1, padx=(5, 0))
+        
+        # Modern log frame
+        log_card = tk.Frame(main_frame, bg=self.colors['bg_secondary'], relief='flat', bd=1)
+        log_card.grid(row=4, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        log_card.columnconfigure(0, weight=1)
+        log_card.rowconfigure(1, weight=1)
+        
+        # Log header
+        log_header = tk.Frame(log_card, bg=self.colors['bg_tertiary'])
+        log_header.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=1, pady=1)
+        log_header.columnconfigure(0, weight=1)
+        
+        log_title = tk.Label(log_header,
+                            text="📝 Activity Log",
+                            bg=self.colors['bg_tertiary'],
+                            fg=self.colors['text_primary'],
+                            font=('Segoe UI', 14, 'bold'))
+        log_title.grid(row=0, column=0, padx=20, pady=15, sticky=tk.W)
+        
+        # Log clear button
+        clear_log_btn = tk.Button(log_header,
+                                 text="🗑️ Clear",
+                                 bg=self.colors['accent_error'],
+                                 fg='white',
+                                 font=('Segoe UI', 9, 'bold'),
+                                 borderwidth=0,
+                                 padx=15, pady=5,
+                                 command=self.clear_log)
+        clear_log_btn.grid(row=0, column=1, padx=20, pady=15, sticky=tk.E)
+        
+        # Log text area
+        log_container = tk.Frame(log_card, bg=self.colors['bg_secondary'])
+        log_container.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=20, pady=(0, 20))
+        log_container.columnconfigure(0, weight=1)
+        log_container.rowconfigure(0, weight=1)
+        
+        self.log_text = tk.Text(log_container, 
+                               height=8, 
+                               bg=self.colors['bg_primary'],
+                               fg=self.colors['text_primary'],
+                               font=('Cascadia Code', 10),
+                               borderwidth=0,
+                               insertbackground=self.colors['accent_primary'],
+                               selectbackground=self.colors['accent_primary'],
+                               wrap=tk.WORD)
         self.log_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
-        # Configure grid weights for resizing
-        main_frame.rowconfigure(1, weight=2)
-        main_frame.rowconfigure(4, weight=1)
+        # Log scrollbar
+        log_scrollbar = ttk.Scrollbar(log_container, orient=tk.VERTICAL, command=self.log_text.yview)
+        log_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        self.log_text.configure(yscrollcommand=log_scrollbar.set)
         
-        self.log("MACARON initialized successfully")
+        # Configure grid weights for responsive design
+        main_frame.rowconfigure(1, weight=2)  # Interface list takes more space
+        main_frame.rowconfigure(4, weight=1)  # Log area
+        
+        # Configure text tags for colored log output
+        self.log_text.tag_configure("success", foreground=self.colors['accent_success'])
+        self.log_text.tag_configure("warning", foreground=self.colors['accent_warning'])
+        self.log_text.tag_configure("error", foreground=self.colors['accent_error'])
+        self.log_text.tag_configure("info", foreground=self.colors['accent_primary'])
+        self.log_text.tag_configure("timestamp", foreground=self.colors['text_muted'])
+        
+        self.log("🚀 MACARON initialized successfully", "success")
+        self.update_status("Ready", "success")
     
-    def log(self, message):
-        """Add message to the log display and logging system"""
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        log_message = f"[{timestamp}] {message}"
+    def clear_log(self):
+        """Clear the log display"""
+        self.log_text.delete('1.0', tk.END)
+        self.log("📝 Log cleared", "info")
+    
+    def update_status(self, message, status_type="info"):
+        """Update the status indicator"""
+        status_configs = {
+            "success": {"icon": "🟢", "color": self.colors['accent_success']},
+            "warning": {"icon": "🟡", "color": self.colors['accent_warning']},
+            "error": {"icon": "🔴", "color": self.colors['accent_error']},
+            "info": {"icon": "🔵", "color": self.colors['accent_primary']},
+            "working": {"icon": "⚪", "color": self.colors['text_secondary']}
+        }
         
-        self.log_text.insert(tk.END, log_message + "\n")
+        config = status_configs.get(status_type, status_configs["info"])
+        self.status_indicator.config(text=config["icon"])
+        self.status_text.config(text=message, fg=config["color"])
+    
+    def log(self, message, log_type="info"):
+        """Add message to the log display with modern formatting"""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        
+        # Insert timestamp
+        self.log_text.insert(tk.END, f"[{timestamp}] ", "timestamp")
+        
+        # Add appropriate emoji and styling based on message content
+        if any(keyword in message.lower() for keyword in ['success', '✅', 'completed', 'installed']):
+            log_type = "success"
+            if not message.startswith('✅'):
+                message = f"✅ {message}"
+        elif any(keyword in message.lower() for keyword in ['warning', '⚠️', 'timeout', 'failed']):
+            log_type = "warning"
+            if not message.startswith('⚠️'):
+                message = f"⚠️ {message}"
+        elif any(keyword in message.lower() for keyword in ['error', '❌', 'critical']):
+            log_type = "error"
+            if not message.startswith('❌'):
+                message = f"❌ {message}"
+        elif any(keyword in message.lower() for keyword in ['info', '📝', 'scanning', 'checking']):
+            log_type = "info"
+            if not message.startswith(('📝', '🔍', '📊')):
+                message = f"📝 {message}"
+        
+        # Insert message with appropriate styling
+        self.log_text.insert(tk.END, message + "\n", log_type)
         self.log_text.see(tk.END)
+        
+        # Also log to file
         self.logger.info(message)
     
     def scan_interfaces(self):
-        """Scan for network interfaces and their MAC addresses - Enhanced Version"""
+        """Scan for network interfaces with modern UI updates"""
+        self.update_status("Scanning interfaces...", "working")
+        
         try:
-            self.log("Scanning network interfaces...")
+            self.log("🔍 Scanning network interfaces...", "info")
             
             # Clear existing items
             for item in self.tree.get_children():
@@ -233,7 +572,7 @@ class MacaronApp:
             try:
                 result = subprocess.run(['ip', 'link', 'show'], 
                                       capture_output=True, text=True, check=True)
-                self.log("Scanning standard network interfaces...")
+                self.log("📡 Scanning standard network interfaces...")
                 
                 lines = result.stdout.split('\n')
                 i = 0
@@ -267,16 +606,18 @@ class MacaronApp:
                                     'type': self._detect_interface_type(interface),
                                     'status': 'up' if 'UP' in line else 'down'
                                 }
-                                self.log(f"Found {detected_interfaces[interface]['type']}: {interface} ({mac_address})")
+                                interface_type = detected_interfaces[interface]['type']
+                                type_icon = self._get_interface_icon(interface_type)
+                                self.log(f"{type_icon} Found {interface_type}: {interface} ({mac_address})")
                     i += 1
                     
             except subprocess.CalledProcessError:
-                self.log("Warning: 'ip link show' command failed")
+                self.log("⚠️ 'ip link show' command failed", "warning")
             
             # Method 2: Alternative detection using 'ls /sys/class/net'
             try:
                 if len(detected_interfaces) == 0:
-                    self.log("Trying alternative interface detection...")
+                    self.log("🔄 Trying alternative interface detection...")
                     result = subprocess.run(['ls', '/sys/class/net/'], 
                                           capture_output=True, text=True, check=True)
                     
@@ -292,16 +633,18 @@ class MacaronApp:
                                             'type': self._detect_interface_type(interface),
                                             'status': 'available'
                                         }
-                                        self.log(f"Found via sysfs {detected_interfaces[interface]['type']}: {interface} ({mac_address})")
+                                        interface_type = detected_interfaces[interface]['type']
+                                        type_icon = self._get_interface_icon(interface_type)
+                                        self.log(f"{type_icon} Found via sysfs {interface_type}: {interface} ({mac_address})")
                             except FileNotFoundError:
                                 continue
                                 
             except subprocess.CalledProcessError:
-                self.log("Warning: Alternative detection failed")
+                self.log("⚠️ Alternative detection failed", "warning")
             
             # Method 3: Bluetooth interfaces
             try:
-                self.log("Scanning Bluetooth interfaces...")
+                self.log("📱 Scanning Bluetooth interfaces...")
                 
                 # Try hciconfig first
                 try:
@@ -316,7 +659,7 @@ class MacaronApp:
                                 'type': 'Bluetooth',
                                 'status': 'available'
                             }
-                            self.log(f"Found Bluetooth: {interface} ({mac_address})")
+                            self.log(f"📱 Found Bluetooth: {interface} ({mac_address})")
                 except subprocess.CalledProcessError:
                     pass
                 
@@ -336,22 +679,22 @@ class MacaronApp:
                                                 'type': 'Bluetooth',
                                                 'status': 'available'
                                             }
-                                            self.log(f"Found Bluetooth via sysfs: {hci_device} ({mac_address})")
+                                            self.log(f"📱 Found Bluetooth via sysfs: {hci_device} ({mac_address})")
                             except FileNotFoundError:
                                 continue
                 except subprocess.CalledProcessError:
                     pass
                     
             except Exception as e:
-                self.log(f"Bluetooth detection error: {e}")
+                self.log(f"📱 Bluetooth detection error: {e}", "error")
             
             # Method 4: USB Network devices
             try:
-                self.log("Scanning USB network devices...")
+                self.log("🔌 Scanning USB network devices...")
                 result = subprocess.run(['lsusb'], capture_output=True, text=True, check=True)
                 for line in result.stdout.split('\n'):
                     if 'Network' in line or 'Ethernet' in line or 'Wireless' in line or 'WiFi' in line:
-                        self.log(f"USB Network device detected: {line.strip()}")
+                        self.log(f"🔌 USB Network device detected: {line.strip()}")
             except subprocess.CalledProcessError:
                 pass
             
@@ -364,23 +707,26 @@ class MacaronApp:
                 if interface not in self.original_macs:
                     self.original_macs[interface] = mac
                 
-                # Add to treeview with enhanced information
+                # Add to treeview with enhanced information and icons
                 original_mac = self.original_macs.get(interface, mac)
-                status = "Original" if mac == original_mac else "Randomized"
+                status = "🟢 Original" if mac == original_mac else "🔄 Randomized"
                 
-                # Add interface type to the display
-                display_name = f"{interface} ({info['type']})"
+                # Add interface with icon
+                type_icon = self._get_interface_icon(info['type'])
+                display_name = f"{type_icon} {interface}"
+                
                 self.tree.insert('', tk.END, values=(display_name, mac, original_mac, status))
             
+            # Update interface count badge
             total_found = len(detected_interfaces)
-            self.log(f"Found {total_found} network interfaces total")
+            self.interface_count.config(text=str(total_found))
             
-            if total_found == 0:
-                self.log("No network interfaces found. Possible issues:")
-                self.log("1. Run with sudo (required for some operations)")
-                self.log("2. No network hardware detected")
-                self.log("3. All interfaces may be virtual/loopback")
-                self.log("4. Network hardware may be disabled")
+            if total_found > 0:
+                self.log(f"🎉 Found {total_found} network interfaces total", "success")
+                self.update_status(f"Found {total_found} interfaces", "success")
+            else:
+                self.log("❌ No network interfaces found", "error")
+                self.update_status("No interfaces found", "error")
                 messagebox.showwarning("No Interfaces", 
                                      "No network interfaces found.\n\n"
                                      "Make sure:\n"
@@ -390,8 +736,23 @@ class MacaronApp:
             
         except Exception as e:
             error_msg = f"Unexpected error during interface scan: {e}"
-            self.log(error_msg)
+            self.log(error_msg, "error")
+            self.update_status("Scan failed", "error")
             messagebox.showerror("Error", error_msg)
+    
+    def _get_interface_icon(self, interface_type):
+        """Get appropriate icon for interface type"""
+        icons = {
+            'WiFi': '📶',
+            'Ethernet': '🌐',
+            'Bluetooth': '📱',
+            'USB-Ethernet': '🔌',
+            'Bonded': '🔗',
+            'Team': '👥',
+            'CAN-Bus': '🚗',
+            'Network': '💻'
+        }
+        return icons.get(interface_type, '💻')
     
     def _is_virtual_interface(self, interface):
         """Check if interface is virtual/should be skipped"""
@@ -484,11 +845,11 @@ class MacaronApp:
             
             # Validate inputs
             if not self.validate_interface_name(interface_name):
-                self.log(f"Invalid interface name: {interface_name}")
+                self.log(f"Invalid interface name: {interface_name}", "error")
                 return False
             
             if not self.validate_mac_address(new_mac, allow_global=is_restoration):
-                self.log(f"Invalid MAC address: {new_mac}")
+                self.log(f"Invalid MAC address: {new_mac}", "error")
                 return False
             
             # Handle different interface types
@@ -499,7 +860,7 @@ class MacaronApp:
                 
         except Exception as e:
             error_msg = f"Unexpected error changing MAC for {interface}: {e}"
-            self.log(error_msg)
+            self.log(error_msg, "error")
             return False
     
     def _change_network_mac(self, interface, new_mac):
@@ -515,7 +876,7 @@ class MacaronApp:
             
             # Update stored MAC
             self.interfaces[interface] = new_mac
-            self.log(f"Changed {interface} MAC to {new_mac}")
+            self.log(f"Changed {interface} MAC to {new_mac}", "success")
             return True
             
         except subprocess.CalledProcessError:
@@ -529,7 +890,7 @@ class MacaronApp:
                               check=True, capture_output=True)
                 
                 self.interfaces[interface] = new_mac
-                self.log(f"Changed {interface} MAC to {new_mac} (via ifconfig)")
+                self.log(f"Changed {interface} MAC to {new_mac} (via ifconfig)", "success")
                 return True
                 
             except subprocess.CalledProcessError:
@@ -548,17 +909,17 @@ class MacaronApp:
                                   check=True, capture_output=True)
                     
                     self.interfaces[interface] = new_mac
-                    self.log(f"Changed {interface} MAC to {new_mac} (via sysfs)")
+                    self.log(f"Changed {interface} MAC to {new_mac} (via sysfs)", "success")
                     return True
                     
                 except (subprocess.CalledProcessError, PermissionError, FileNotFoundError):
-                    self.log(f"Failed to change MAC for {interface} - all methods failed")
+                    self.log(f"Failed to change MAC for {interface} - all methods failed", "error")
                     return False
     
     def _change_bluetooth_mac(self, interface, new_mac):
         """Change MAC address for Bluetooth interfaces"""
         try:
-            self.log(f"Attempting to change Bluetooth MAC for {interface}")
+            self.log(f"🖇 Attempting to change Bluetooth MAC for {interface}")
             
             # Method 1: Using hciconfig
             try:
@@ -581,10 +942,10 @@ class MacaronApp:
                 
                 if result.returncode == 0:
                     self.interfaces[interface] = new_mac
-                    self.log(f"Successfully changed Bluetooth MAC for {interface} to {new_mac}")
+                    self.log(f"🖇 Successfully changed Bluetooth MAC for {interface} to {new_mac}", "success")
                     return True
                 else:
-                    self.log(f"Bluetooth MAC change not supported for {interface}")
+                    self.log(f"🖇 Bluetooth MAC change not supported for {interface}", "warning")
                     
             except subprocess.CalledProcessError:
                 pass
@@ -607,16 +968,16 @@ class MacaronApp:
                               check=True, capture_output=True)
                 
                 self.interfaces[interface] = new_mac
-                self.log(f"Changed Bluetooth MAC for {interface} to {new_mac} (via bdaddr)")
+                self.log(f"🖇 Changed Bluetooth MAC for {interface} to {new_mac} (via bdaddr)", "success")
                 return True
                 
             except subprocess.CalledProcessError:
                 pass
             
             # Method 3: Inform user about limitations
-            self.log(f"Bluetooth MAC randomization for {interface} requires hardware support")
-            self.log("Many Bluetooth adapters have fixed MAC addresses in firmware")
-            self.log("Consider using a USB Bluetooth adapter that supports MAC changing")
+            self.log(f"🖇 Bluetooth MAC randomization for {interface} requires hardware support")
+            self.log("🖇 Many Bluetooth adapters have fixed MAC addresses in firmware")
+            self.log("🖇 Consider using a USB Bluetooth adapter that supports MAC changing")
             
             # For logging purposes, update the stored MAC even if change failed
             # This helps track which interfaces were attempted
@@ -628,7 +989,7 @@ class MacaronApp:
             return False
             
         except Exception as e:
-            self.log(f"Error changing Bluetooth MAC for {interface}: {e}")
+            self.log(f"🖇 Error changing Bluetooth MAC for {interface}: {e}", "error")
             return False
     
     def randomize_selected(self):
@@ -648,7 +1009,7 @@ class MacaronApp:
                 success_count += 1
         
         self.scan_interfaces()  # Refresh display
-        self.log(f"Successfully randomized {success_count} interfaces")
+        self.log(f"🎉 Successfully randomized {success_count} interfaces", "success")
     
     def randomize_all(self):
         """Randomize MAC addresses for all available interfaces"""
@@ -667,7 +1028,7 @@ class MacaronApp:
                 success_count += 1
         
         self.scan_interfaces()  # Refresh display
-        self.log(f"Successfully randomized {success_count}/{len(self.interfaces)} interfaces")
+        self.log(f"🎉 Successfully randomized {success_count}/{len(self.interfaces)} interfaces", "success")
     
     def restore_original(self):
         """Restore original MAC addresses for all interfaces"""
@@ -684,7 +1045,7 @@ class MacaronApp:
                 success_count += 1
         
         self.scan_interfaces()  # Refresh display
-        self.log(f"Successfully restored {success_count}/{len(self.original_macs)} interfaces")
+        self.log(f"🎉 Successfully restored {success_count}/{len(self.original_macs)} interfaces", "success")
     
     def toggle_auto_randomization(self):
         """Start or stop automatic randomization"""
@@ -694,7 +1055,7 @@ class MacaronApp:
             self.stop_auto_randomization()
     
     def start_auto_randomization(self):
-        """Start automatic randomization thread"""
+        """Start automatic randomization with modern UI updates"""
         try:
             self.interval_minutes = int(self.interval_var.get())
             if self.interval_minutes < 1:
@@ -704,22 +1065,26 @@ class MacaronApp:
             return
         
         self.auto_randomize_active = True
-        self.auto_button.config(text="Stop Auto-Randomization")
-        self.auto_status_label.config(text="Running", style='Success.TLabel')
+        self.auto_button.config(text="⏹️ Stop Auto-Randomization", style='Danger.TButton')
+        self.auto_status_indicator.config(text="🔄")
+        self.auto_status_label.config(text="Running", fg=self.colors['accent_success'])
         
         # Start background thread
         self.auto_thread = threading.Thread(target=self.auto_randomization_worker, daemon=True)
         self.auto_thread.start()
         
-        self.log(f"Started automatic randomization (interval: {self.interval_minutes} minutes)")
+        self.log(f"▶️ Started automatic randomization (interval: {self.interval_minutes} minutes)", "success")
+        self.update_status("Auto-randomization active", "working")
     
     def stop_auto_randomization(self):
-        """Stop automatic randomization"""
+        """Stop automatic randomization with modern UI updates"""
         self.auto_randomize_active = False
-        self.auto_button.config(text="Start Auto-Randomization")
-        self.auto_status_label.config(text="Stopped", style='')
+        self.auto_button.config(text="▶️ Start Auto-Randomization", style='Success.TButton')
+        self.auto_status_indicator.config(text="⏹️")
+        self.auto_status_label.config(text="Stopped", fg=self.colors['text_muted'])
         
-        self.log("Stopped automatic randomization")
+        self.log("⏹️ Stopped automatic randomization", "info")
+        self.update_status("Ready", "success")
     
     def auto_randomization_worker(self):
         """Background worker for automatic randomization"""
@@ -746,7 +1111,7 @@ class MacaronApp:
                 success_count += 1
         
         self.scan_interfaces()  # Refresh display
-        self.log(f"Auto-randomization: Updated {success_count}/{len(self.interfaces)} interfaces")
+        self.log(f"🎉 Auto-randomization: Updated {success_count}/{len(self.interfaces)} interfaces", "success")
 
     def run_diagnostics(self):
         """Run comprehensive diagnostics to help troubleshoot interface detection"""
