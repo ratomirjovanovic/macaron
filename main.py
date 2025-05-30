@@ -910,12 +910,12 @@ class MacaronApp:
         tk.Button(button_frame, text="Close", command=diag_window.destroy).pack(side=tk.LEFT, padx=5)
 
     def enable_all_interfaces(self):
-        """Enable all network interfaces (WiFi, Bluetooth, Ethernet, USB) - Integrated Solution"""
+        """Enable all network interfaces (WiFi, Bluetooth, Ethernet, USB) - Enhanced with Real-time Progress"""
         
         # Create progress window
         progress_window = tk.Toplevel(self.root)
         progress_window.title("MACARON - Enable All Interfaces")
-        progress_window.geometry("700x600")
+        progress_window.geometry("750x650")
         progress_window.resizable(False, False)
         
         # Center the window
@@ -923,30 +923,179 @@ class MacaronApp:
         progress_window.grab_set()
         
         # Create scrollable text widget for progress
-        progress_text = scrolledtext.ScrolledText(progress_window, wrap=tk.WORD, font=('Courier', 10))
+        progress_text = scrolledtext.ScrolledText(progress_window, wrap=tk.WORD, font=('Courier', 9))
         progress_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Add progress bar
+        # Enhanced progress frame
         progress_frame = tk.Frame(progress_window)
-        progress_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
+        progress_frame.pack(fill=tk.X, padx=10, pady=(0, 5))
         
-        progress_bar = ttk.Progressbar(progress_frame, mode='determinate', length=400)
-        progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        # Main progress bar
+        main_progress_bar = ttk.Progressbar(progress_frame, mode='determinate', length=400)
+        main_progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
-        progress_label = tk.Label(progress_frame, text="Starting...", font=('Arial', 9))
-        progress_label.pack(side=tk.RIGHT, padx=(10, 0))
+        # Step progress bar (for sub-operations)
+        step_progress_bar = ttk.Progressbar(progress_frame, mode='indeterminate', length=50)
+        step_progress_bar.pack(side=tk.RIGHT, padx=(5, 0))
         
-        def log_progress(message, color="black", step=None, total_steps=8):
-            progress_text.insert(tk.END, message + "\n")
+        # Status labels
+        status_frame = tk.Frame(progress_window)
+        status_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
+        
+        main_status_label = tk.Label(status_frame, text="Initializing...", font=('Arial', 10, 'bold'))
+        main_status_label.pack(anchor=tk.W)
+        
+        sub_status_label = tk.Label(status_frame, text="", font=('Arial', 9))
+        sub_status_label.pack(anchor=tk.W)
+        
+        # Animation control
+        animation_active = False
+        
+        def start_step_animation():
+            nonlocal animation_active
+            animation_active = True
+            step_progress_bar.start(10)
+        
+        def stop_step_animation():
+            nonlocal animation_active
+            animation_active = False
+            step_progress_bar.stop()
+            
+        def log_progress(message, step=None, total_steps=8, substep=None):
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            progress_text.insert(tk.END, f"[{timestamp}] {message}\n")
             progress_text.see(tk.END)
+            
             if step:
-                progress_bar['value'] = (step / total_steps) * 100
-                progress_label.config(text=f"Step {step}/{total_steps}")
+                main_progress_bar['value'] = (step / total_steps) * 100
+                main_status_label.config(text=f"Step {step}/{total_steps}")
+            
+            if substep:
+                sub_status_label.config(text=substep)
+            
             progress_window.update()
-            self.log(message)  # Also log to main log
+            self.log(message)
+        
+        def run_command_with_progress(cmd, description, timeout=60):
+            """Run command with real-time progress feedback"""
+            start_step_animation()
+            sub_status_label.config(text=f"Executing: {description}")
+            progress_window.update()
+            
+            try:
+                # For apt commands, show more detailed progress
+                if cmd[0] == 'apt':
+                    return run_apt_with_progress(cmd, description, timeout)
+                else:
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+                    stop_step_animation()
+                    return result
+            except subprocess.TimeoutExpired:
+                stop_step_animation()
+                log_progress(f"⚠️ {description} timed out after {timeout} seconds")
+                return None
+            except Exception as e:
+                stop_step_animation()
+                log_progress(f"⚠️ Error in {description}: {e}")
+                return None
+        
+        def run_apt_with_progress(cmd, description, timeout):
+            """Run apt command with detailed progress"""
+            try:
+                # Start the process
+                process = subprocess.Popen(
+                    cmd, 
+                    stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE, 
+                    text=True,
+                    env={**os.environ, 'DEBIAN_FRONTEND': 'noninteractive'}
+                )
+                
+                start_time = time.time()
+                output_lines = []
+                error_lines = []
+                
+                # Monitor the process
+                while process.poll() is None:
+                    # Check timeout
+                    if time.time() - start_time > timeout:
+                        process.terminate()
+                        log_progress(f"⚠️ {description} timed out after {timeout} seconds")
+                        stop_step_animation()
+                        return None
+                    
+                    # Read output
+                    try:
+                        stdout_line = process.stdout.readline()
+                        if stdout_line:
+                            line = stdout_line.strip()
+                            output_lines.append(line)
+                            
+                            # Parse apt output for progress
+                            if 'Reading package lists' in line:
+                                sub_status_label.config(text="📖 Reading package lists...")
+                            elif 'Building dependency tree' in line:
+                                sub_status_label.config(text="🔧 Building dependency tree...")
+                            elif 'Reading state information' in line:
+                                sub_status_label.config(text="📊 Reading state information...")
+                            elif 'The following NEW packages will be installed' in line:
+                                sub_status_label.config(text="📦 Preparing new packages...")
+                            elif 'Need to get' in line:
+                                # Extract download size
+                                if 'B' in line:
+                                    size_info = line.split('Need to get ')[1].split(' ')[0]
+                                    sub_status_label.config(text=f"📥 Downloading {size_info}...")
+                            elif 'Get:' in line and 'http' in line:
+                                # Show which package is being downloaded
+                                try:
+                                    package = line.split()[3] if len(line.split()) > 3 else "packages"
+                                    sub_status_label.config(text=f"📥 Downloading {package}...")
+                                except:
+                                    sub_status_label.config(text="📥 Downloading packages...")
+                            elif 'Unpacking' in line:
+                                try:
+                                    package = line.split()[1] if len(line.split()) > 1 else "package"
+                                    sub_status_label.config(text=f"📦 Unpacking {package}...")
+                                except:
+                                    sub_status_label.config(text="📦 Unpacking packages...")
+                            elif 'Setting up' in line:
+                                try:
+                                    package = line.split()[2] if len(line.split()) > 2 else "package"
+                                    sub_status_label.config(text=f"⚙️ Setting up {package}...")
+                                except:
+                                    sub_status_label.config(text="⚙️ Setting up packages...")
+                            
+                            progress_window.update()
+                    except:
+                        pass
+                    
+                    time.sleep(0.1)
+                
+                # Get final output
+                stdout, stderr = process.communicate(timeout=5)
+                if stdout:
+                    output_lines.extend(stdout.strip().split('\n'))
+                if stderr:
+                    error_lines.extend(stderr.strip().split('\n'))
+                
+                stop_step_animation()
+                
+                # Create mock result object
+                class MockResult:
+                    def __init__(self, returncode, stdout, stderr):
+                        self.returncode = returncode
+                        self.stdout = '\n'.join(output_lines) if output_lines else ''
+                        self.stderr = '\n'.join(error_lines) if error_lines else ''
+                
+                return MockResult(process.returncode, '\n'.join(output_lines), '\n'.join(error_lines))
+                
+            except Exception as e:
+                stop_step_animation()
+                log_progress(f"⚠️ Error in {description}: {e}")
+                return None
         
         log_progress("🔧 MACARON - Enable All Network Interfaces")
-        log_progress("=" * 50)
+        log_progress("=" * 60)
         log_progress("")
         
         try:
@@ -958,6 +1107,7 @@ class MacaronApp:
                 progress_window.destroy()
                 return
             log_progress("✅ Running as root")
+            time.sleep(0.5)
             log_progress("")
             
             # Step 2: Unblock RF interfaces (WiFi/Bluetooth)
@@ -965,30 +1115,37 @@ class MacaronApp:
             try:
                 # Check if rfkill is available
                 subprocess.run(['which', 'rfkill'], check=True, capture_output=True)
-                log_progress("🔍 Checking RF kill status...")
+                log_progress("🔍 Checking RF kill status...", substep="Scanning RF devices...")
                 
                 # Show current status
                 result = subprocess.run(['rfkill', 'list'], capture_output=True, text=True)
                 blocked_count = result.stdout.count("Soft blocked: yes")
                 if blocked_count > 0:
                     log_progress(f"🚫 Found {blocked_count} blocked interfaces")
-                    log_progress("🔓 Unblocking all RF interfaces...")
+                    log_progress("🔓 Unblocking all RF interfaces...", substep="Unblocking RF kill...")
                     subprocess.run(['rfkill', 'unblock', 'all'], check=True, capture_output=True)
                     log_progress("✅ All RF interfaces unblocked")
                 else:
                     log_progress("✅ No blocked RF interfaces found")
                     
             except subprocess.CalledProcessError:
-                log_progress("⚠️ rfkill not available - trying to install...")
-                try:
-                    log_progress("📥 Updating package list...")
-                    subprocess.run(['apt', 'update', '-q'], capture_output=True, timeout=60)
-                    log_progress("📦 Installing rfkill...")
-                    subprocess.run(['apt', 'install', '-y', 'rfkill'], capture_output=True, timeout=120)
-                    subprocess.run(['rfkill', 'unblock', 'all'], capture_output=True)
-                    log_progress("✅ rfkill installed and interfaces unblocked")
-                except Exception as e:
-                    log_progress(f"⚠️ Could not install/use rfkill: {e}")
+                log_progress("⚠️ rfkill not available - installing...", substep="Installing rfkill...")
+                
+                # Update package list first
+                result = run_command_with_progress(['apt', 'update', '-q'], "Updating package list", 90)
+                if result and result.returncode == 0:
+                    log_progress("✅ Package list updated")
+                    
+                    # Install rfkill
+                    result = run_command_with_progress(['apt', 'install', '-y', 'rfkill'], "Installing rfkill", 120)
+                    if result and result.returncode == 0:
+                        subprocess.run(['rfkill', 'unblock', 'all'], capture_output=True)
+                        log_progress("✅ rfkill installed and interfaces unblocked")
+                    else:
+                        log_progress("⚠️ Could not install rfkill")
+                else:
+                    log_progress("⚠️ Could not update package list")
+                    
             log_progress("")
             
             # Step 3: Load network kernel modules
@@ -997,40 +1154,51 @@ class MacaronApp:
                       "rtl8188eu", "rtl8192cu", "rtl8812au", "btusb"]
             
             for i, module in enumerate(modules):
+                sub_status_label.config(text=f"Checking module {i+1}/{len(modules)}: {module}")
+                progress_window.update()
+                
                 try:
                     # Check if module is already loaded
                     result = subprocess.run(['lsmod'], capture_output=True, text=True)
                     if module in result.stdout:
                         log_progress(f"✅ {module} already loaded")
                     else:
-                        log_progress(f"🔄 Loading {module} module...")
+                        log_progress(f"🔄 Loading {module} module...", substep=f"Loading {module}...")
+                        start_step_animation()
                         subprocess.run(['modprobe', module], check=True, capture_output=True)
+                        stop_step_animation()
                         log_progress(f"✅ Loaded {module} module")
                         
                         # Small delay to let module initialize
                         if module.startswith(('iwl', 'ath', 'rt')):
+                            sub_status_label.config(text=f"Initializing {module}...")
+                            progress_window.update()
                             time.sleep(1)
                             
                 except subprocess.CalledProcessError:
+                    stop_step_animation()
                     log_progress(f"⚠️ Could not load {module} (may not be available)")
+                    
+            sub_status_label.config(text="")
             log_progress("")
             
-            # Step 4: Start Bluetooth service  
+            # Step 4: Bluetooth service activation
             log_progress("📱 STEP 4: Bluetooth Service Activation", step=4)
             try:
                 # Check if bluetooth service exists
-                result = subprocess.run(['systemctl', 'is-available', 'bluetooth'], 
-                                      capture_output=True)
+                result = subprocess.run(['systemctl', 'is-available', 'bluetooth'], capture_output=True)
                 if result.returncode == 0:
-                    log_progress("🔄 Starting Bluetooth service...")
-                    subprocess.run(['systemctl', 'start', 'bluetooth'], 
-                                 capture_output=True, timeout=20)
-                    subprocess.run(['systemctl', 'enable', 'bluetooth'], 
-                                 capture_output=True, timeout=10)
+                    log_progress("🔄 Starting Bluetooth service...", substep="Starting bluetooth.service...")
+                    start_step_animation()
+                    subprocess.run(['systemctl', 'start', 'bluetooth'], capture_output=True, timeout=20)
+                    subprocess.run(['systemctl', 'enable', 'bluetooth'], capture_output=True, timeout=10)
+                    stop_step_animation()
                     
                     # Try to power on bluetooth
                     try:
                         subprocess.run(['which', 'bluetoothctl'], check=True, capture_output=True)
+                        sub_status_label.config(text="Powering on Bluetooth...")
+                        progress_window.update()
                         process = subprocess.Popen(['bluetoothctl'], stdin=subprocess.PIPE, 
                                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                         process.communicate(input=b'power on\nquit\n', timeout=10)
@@ -1038,126 +1206,157 @@ class MacaronApp:
                     except Exception:
                         log_progress("✅ Bluetooth service started")
                 else:
-                    log_progress("⚠️ Installing Bluetooth packages (this may take 2-3 minutes)...")
-                    log_progress("📥 Please wait - downloading Bluetooth stack...")
+                    log_progress("⚠️ Bluetooth not installed - installing complete stack...")
                     
-                    # Install with better error handling and longer timeout
-                    result = subprocess.run(['apt', 'install', '-y', 'bluez', 'bluetooth', 'bluez-tools'], 
-                                 capture_output=True, timeout=300, text=True)  # 5 minutes timeout
+                    # Install Bluetooth with detailed progress
+                    bluetooth_packages = ['bluez', 'bluetooth', 'bluez-tools']
+                    log_progress(f"📦 Installing packages: {', '.join(bluetooth_packages)}")
                     
-                    if result.returncode == 0:
+                    result = run_command_with_progress(
+                        ['apt', 'install', '-y'] + bluetooth_packages, 
+                        "Installing Bluetooth stack", 
+                        300
+                    )
+                    
+                    if result and result.returncode == 0:
                         log_progress("📦 Bluetooth packages installed successfully")
+                        
+                        # Start the service
+                        start_step_animation()
                         subprocess.run(['systemctl', 'start', 'bluetooth'], capture_output=True, timeout=20)
+                        stop_step_animation()
                         log_progress("✅ Bluetooth installed and started")
                     else:
-                        log_progress(f"⚠️ Bluetooth installation had issues: {result.stderr[:200]}...")
+                        if result and result.stderr:
+                            log_progress(f"⚠️ Bluetooth installation issues: {result.stderr[:100]}...")
                         log_progress("⚠️ Continuing without Bluetooth")
                     
             except subprocess.TimeoutExpired:
-                log_progress("⚠️ Bluetooth installation timed out after 5 minutes")
-                log_progress("⚠️ This is normal on slow connections - continuing...")
+                stop_step_animation()
+                log_progress("⚠️ Bluetooth installation timed out")
+                log_progress("⚠️ Continuing to next step...")
             except Exception as e:
+                stop_step_animation()
                 log_progress(f"⚠️ Bluetooth setup error: {str(e)[:200]}...")
+                
+            sub_status_label.config(text="")
             log_progress("")
             
             # Step 5: Install missing firmware
             log_progress("📦 STEP 5: Installing Network Firmware", step=5)
-            try:
-                firmware_packages = ["firmware-linux-nonfree", "firmware-realtek", 
-                                   "firmware-atheros", "firmware-intel-sound"]
-                log_progress("🔄 Installing WiFi firmware packages...")
+            firmware_packages = ["firmware-linux-nonfree", "firmware-realtek", 
+                               "firmware-atheros", "firmware-intel-sound"]
+            
+            log_progress("🔍 Checking available firmware packages...")
+            available_packages = []
+            
+            for i, package in enumerate(firmware_packages):
+                sub_status_label.config(text=f"Checking {package} ({i+1}/{len(firmware_packages)})")
+                progress_window.update()
                 
-                # Check which packages are available and install
-                available_packages = []
-                for package in firmware_packages:
-                    try:
-                        log_progress(f"🔍 Checking {package}...")
-                        result = subprocess.run(['apt', 'search', package], 
-                                              capture_output=True, text=True, timeout=15)
-                        if package in result.stdout:
-                            available_packages.append(package)
-                            log_progress(f"   ✅ {package} available")
-                    except Exception:
-                        log_progress(f"   ⚠️ Could not check {package}")
-                        continue
-                
-                if available_packages:
-                    log_progress(f"📥 Installing firmware packages (may take 2-3 minutes)...")
-                    cmd = ['apt', 'install', '-y'] + available_packages
-                    result = subprocess.run(cmd, capture_output=True, timeout=300, text=True)  # 5 minutes
-                    
-                    if result.returncode == 0:
-                        log_progress(f"✅ Installed firmware: {', '.join(available_packages)}")
+                try:
+                    result = subprocess.run(['apt', 'search', package], capture_output=True, text=True, timeout=15)
+                    if package in result.stdout:
+                        available_packages.append(package)
+                        log_progress(f"   ✅ {package} available")
                     else:
-                        log_progress(f"⚠️ Some firmware installation issues - continuing...")
+                        log_progress(f"   ⚠️ {package} not found")
+                except Exception:
+                    log_progress(f"   ⚠️ Could not check {package}")
+            
+            if available_packages:
+                log_progress(f"📥 Installing {len(available_packages)} firmware packages...")
+                log_progress(f"Packages: {', '.join(available_packages)}")
+                
+                result = run_command_with_progress(
+                    ['apt', 'install', '-y'] + available_packages,
+                    "Installing firmware packages",
+                    300
+                )
+                
+                if result and result.returncode == 0:
+                    log_progress(f"✅ Successfully installed firmware packages")
                 else:
-                    log_progress("⚠️ No additional firmware packages found")
-                    
-            except subprocess.TimeoutExpired:
-                log_progress("⚠️ Firmware installation timed out - continuing...")
-            except Exception as e:
-                log_progress(f"⚠️ Firmware installation warning: {str(e)[:200]}...")
+                    if result and result.stderr:
+                        log_progress(f"⚠️ Some firmware issues: {result.stderr[:100]}...")
+                    log_progress("⚠️ Continuing anyway...")
+            else:
+                log_progress("⚠️ No additional firmware packages found")
+            
+            sub_status_label.config(text="")
             log_progress("")
             
             # Step 6: Force WiFi interface detection
             log_progress("📡 STEP 6: Force WiFi Interface Detection", step=6)
+            sub_status_label.config(text="Scanning for WiFi hardware...")
+            progress_window.update()
+            
+            wifi_found = False
+            
+            # Method 1: Check iwconfig output
             try:
-                log_progress("🔄 Scanning for WiFi hardware...")
+                result = subprocess.run(['iwconfig'], capture_output=True, text=True, timeout=10)
+                wifi_interfaces = []
+                for line in result.stdout.split('\n'):
+                    if 'IEEE 802.11' in line or 'ESSID:' in line:
+                        interface = line.split()[0]
+                        if interface and not interface.startswith('lo'):
+                            wifi_interfaces.append(interface)
                 
-                # Method 1: Check iwconfig output
-                try:
-                    result = subprocess.run(['iwconfig'], capture_output=True, text=True, timeout=10)
-                    wifi_interfaces = []
-                    for line in result.stdout.split('\n'):
-                        if 'IEEE 802.11' in line or 'ESSID:' in line:
-                            interface = line.split()[0]
-                            if interface and not interface.startswith('lo'):
-                                wifi_interfaces.append(interface)
-                    
-                    for wifi_iface in set(wifi_interfaces):
-                        log_progress(f"📡 Found WiFi interface: {wifi_iface}")
-                        try:
-                            subprocess.run(['ip', 'link', 'set', wifi_iface, 'up'], 
-                                         capture_output=True, timeout=5)
-                            log_progress(f"✅ Activated WiFi: {wifi_iface}")
-                        except Exception:
-                            log_progress(f"⚠️ Could not activate {wifi_iface}")
-                            
-                except Exception:
-                    log_progress("⚠️ iwconfig not available")
-                
-                # Method 2: Check for wlan interfaces in /sys/class/net
-                try:
-                    if os.path.exists("/sys/class/net"):
-                        for interface in os.listdir("/sys/class/net"):
-                            if interface.startswith(('wlan', 'wlp', 'wlx')):
-                                log_progress(f"📡 Found WiFi interface: {interface}")
-                                try:
-                                    subprocess.run(['ip', 'link', 'set', interface, 'up'], 
-                                                 capture_output=True, timeout=5)
-                                    log_progress(f"✅ Activated WiFi: {interface}")
-                                except Exception:
-                                    log_progress(f"⚠️ Could not activate {interface}")
-                except Exception:
-                    log_progress("⚠️ Could not scan /sys/class/net")
-                    
-            except Exception as e:
-                log_progress(f"⚠️ WiFi detection error: {e}")
+                for wifi_iface in set(wifi_interfaces):
+                    log_progress(f"📡 Found WiFi interface: {wifi_iface}")
+                    try:
+                        sub_status_label.config(text=f"Activating {wifi_iface}...")
+                        progress_window.update()
+                        subprocess.run(['ip', 'link', 'set', wifi_iface, 'up'], capture_output=True, timeout=5)
+                        log_progress(f"✅ Activated WiFi: {wifi_iface}")
+                        wifi_found = True
+                    except Exception:
+                        log_progress(f"⚠️ Could not activate {wifi_iface}")
+                        
+            except Exception:
+                log_progress("⚠️ iwconfig not available")
+            
+            # Method 2: Check for wlan interfaces in /sys/class/net
+            try:
+                if os.path.exists("/sys/class/net"):
+                    for interface in os.listdir("/sys/class/net"):
+                        if interface.startswith(('wlan', 'wlp', 'wlx')):
+                            log_progress(f"📡 Found WiFi interface: {interface}")
+                            try:
+                                sub_status_label.config(text=f"Activating {interface}...")
+                                progress_window.update()
+                                subprocess.run(['ip', 'link', 'set', interface, 'up'], capture_output=True, timeout=5)
+                                log_progress(f"✅ Activated WiFi: {interface}")
+                                wifi_found = True
+                            except Exception:
+                                log_progress(f"⚠️ Could not activate {interface}")
+            except Exception:
+                log_progress("⚠️ Could not scan /sys/class/net")
+            
+            if not wifi_found:
+                log_progress("⚠️ No WiFi interfaces detected")
+                log_progress("💡 This may be normal if no WiFi hardware is present")
+            
+            sub_status_label.config(text="")
             log_progress("")
             
             # Step 7: Activate all network interfaces
             log_progress("🌐 STEP 7: Activating All Network Interfaces", step=7)
             activated_interfaces = []
             
-            # Find all available interfaces
+            sub_status_label.config(text="Scanning network interfaces...")
+            progress_window.update()
+            
             try:
                 if os.path.exists("/sys/class/net"):
-                    for interface in os.listdir("/sys/class/net"):
-                        if interface == "lo":  # Skip loopback
-                            continue
-                        if any(interface.startswith(prefix) for prefix in 
-                              ["docker", "veth", "br-", "virbr", "tun", "tap"]):  # Skip virtual
-                            continue
+                    interfaces = [i for i in os.listdir("/sys/class/net") 
+                                if i != "lo" and not any(i.startswith(p) for p in 
+                                ["docker", "veth", "br-", "virbr", "tun", "tap"])]
+                    
+                    for i, interface in enumerate(interfaces):
+                        sub_status_label.config(text=f"Activating interface {i+1}/{len(interfaces)}: {interface}")
+                        progress_window.update()
                         
                         try:
                             # Try to bring interface up
@@ -1183,15 +1382,21 @@ class MacaronApp:
                                 activated_interfaces.append((interface, interface_type, mac))
                                 
                         except Exception as e:
-                            log_progress(f"⚠️ Could not activate {interface}: {e}")
+                            log_progress(f"⚠️ Could not activate {interface}: {str(e)[:50]}...")
                             
             except Exception as e:
                 log_progress(f"❌ Error accessing network interfaces: {e}")
+            
+            sub_status_label.config(text="")
             log_progress("")
             
             # Step 8: Activate Bluetooth interfaces
             log_progress("📱 STEP 8: Activating Bluetooth Interfaces", step=8)
             bluetooth_found = False
+            
+            sub_status_label.config(text="Scanning Bluetooth devices...")
+            progress_window.update()
+            
             try:
                 # Try hciconfig approach
                 result = subprocess.run(['hciconfig'], capture_output=True, text=True, timeout=10)
@@ -1203,10 +1408,11 @@ class MacaronApp:
                             bt_interface = match.group(1)
                             try:
                                 log_progress(f"🔄 Activating {bt_interface}...")
-                                subprocess.run(['hciconfig', bt_interface, 'up'], 
-                                             capture_output=True, timeout=10)
-                                subprocess.run(['hciconfig', bt_interface, 'piscan'], 
-                                             capture_output=True, timeout=5)
+                                sub_status_label.config(text=f"Activating {bt_interface}...")
+                                progress_window.update()
+                                
+                                subprocess.run(['hciconfig', bt_interface, 'up'], capture_output=True, timeout=10)
+                                subprocess.run(['hciconfig', bt_interface, 'piscan'], capture_output=True, timeout=5)
                                 log_progress(f"✅ Bluetooth: {bt_interface}")
                                 bluetooth_found = True
                             except Exception:
@@ -1225,40 +1431,45 @@ class MacaronApp:
                 
                 if not bluetooth_found:
                     log_progress("⚠️ No Bluetooth interfaces found")
+                    log_progress("💡 This may be normal if no Bluetooth hardware is present")
                     
             except Exception as e:
-                log_progress(f"⚠️ Bluetooth activation error: {e}")
+                log_progress(f"⚠️ Bluetooth activation error: {str(e)[:100]}...")
+            
+            sub_status_label.config(text="")
             log_progress("")
             
-            # Final steps: Restart network services
+            # Final step: Restart network services
             log_progress("🔄 FINAL: Restarting Network Services")
             try:
                 # Restart NetworkManager
-                result = subprocess.run(['systemctl', 'is-active', 'NetworkManager'], 
-                                      capture_output=True)
+                result = subprocess.run(['systemctl', 'is-active', 'NetworkManager'], capture_output=True)
                 if result.returncode == 0:
-                    log_progress("🔄 Restarting NetworkManager...")
-                    subprocess.run(['systemctl', 'restart', 'NetworkManager'], 
-                                 capture_output=True, timeout=20)
+                    log_progress("🔄 Restarting NetworkManager...", substep="Restarting NetworkManager...")
+                    start_step_animation()
+                    subprocess.run(['systemctl', 'restart', 'NetworkManager'], capture_output=True, timeout=20)
+                    stop_step_animation()
                     log_progress("✅ NetworkManager restarted")
                 
                 # Restart wpa_supplicant if active
-                result = subprocess.run(['systemctl', 'is-active', 'wpa_supplicant'], 
-                                      capture_output=True)
+                result = subprocess.run(['systemctl', 'is-active', 'wpa_supplicant'], capture_output=True)
                 if result.returncode == 0:
-                    subprocess.run(['systemctl', 'restart', 'wpa_supplicant'], 
-                                 capture_output=True, timeout=15)
+                    sub_status_label.config(text="Restarting wpa_supplicant...")
+                    progress_window.update()
+                    subprocess.run(['systemctl', 'restart', 'wpa_supplicant'], capture_output=True, timeout=15)
                     log_progress("✅ wpa_supplicant restarted")
                     
             except Exception as e:
-                log_progress(f"⚠️ Service restart warning: {e}")
-            log_progress("")
+                stop_step_animation()
+                log_progress(f"⚠️ Service restart warning: {str(e)[:100]}...")
             
             # Final summary
-            progress_bar['value'] = 100
-            progress_label.config(text="Complete!")
+            main_progress_bar['value'] = 100
+            main_status_label.config(text="✅ COMPLETE!")
+            sub_status_label.config(text="All operations finished")
+            
             log_progress("✅ ACTIVATION COMPLETE!")
-            log_progress("=" * 50)
+            log_progress("=" * 60)
             total_interfaces = len(activated_interfaces) + (1 if bluetooth_found else 0)
             log_progress(f"🎉 Found and activated {total_interfaces} network interfaces!")
             log_progress("")
@@ -1269,30 +1480,41 @@ class MacaronApp:
                 log_progress(f"   • Bluetooth interfaces activated")
             log_progress("")
             log_progress("🔄 Now click 'Close & Scan Interfaces' to see all available interfaces!")
-            log_progress("")
-            log_progress("💡 TIP: If WiFi still not visible, try:")
-            log_progress("   • Check if WiFi hardware is present: lspci | grep -i wireless")
-            log_progress("   • Manual activation: sudo ip link set wlan0 up")
-            log_progress("   • Alternative: nmcli device wifi list")
             
-            # Add Close button
+            if not activated_interfaces or len(activated_interfaces) <= 1:
+                log_progress("")
+                log_progress("💡 TROUBLESHOOTING TIPS:")
+                log_progress("   • Check hardware: lspci | grep -i wireless")
+                log_progress("   • Manual WiFi check: nmcli device wifi list")
+                log_progress("   • Check dmesg: dmesg | grep -i wifi")
+                log_progress("   • Verify drivers: lsmod | grep -E '(iwl|ath|rt)'")
+            
+            # Add enhanced buttons
             button_frame = tk.Frame(progress_window)
-            button_frame.pack(pady=10)
+            button_frame.pack(pady=15)
             
             def close_and_scan():
                 progress_window.destroy()
-                # Wait a moment for interfaces to settle
-                time.sleep(2)
+                # Wait for interfaces to settle
+                time.sleep(3)
                 self.scan_interfaces()
             
-            tk.Button(button_frame, text="Close & Scan Interfaces", 
-                     command=close_and_scan, bg='lightgreen', font=('Arial', 10, 'bold')).pack(side=tk.LEFT, padx=5)
-            tk.Button(button_frame, text="Close", 
-                     command=progress_window.destroy, font=('Arial', 10)).pack(side=tk.LEFT, padx=5)
+            # Styled buttons
+            scan_button = tk.Button(button_frame, text="✅ Close & Scan Interfaces", 
+                                  command=close_and_scan, bg='#4CAF50', fg='white', 
+                                  font=('Arial', 11, 'bold'), padx=20, pady=8)
+            scan_button.pack(side=tk.LEFT, padx=5)
+            
+            close_button = tk.Button(button_frame, text="Close", 
+                                   command=progress_window.destroy, 
+                                   font=('Arial', 10), padx=15, pady=8)
+            close_button.pack(side=tk.LEFT, padx=5)
             
         except Exception as e:
-            progress_bar['value'] = 0
-            progress_label.config(text="Error!")
+            stop_step_animation()
+            main_progress_bar['value'] = 0
+            main_status_label.config(text="❌ ERROR!")
+            sub_status_label.config(text=str(e)[:50] + "...")
             log_progress(f"❌ CRITICAL ERROR: {e}")
             log_progress("Please check the logs and try manual activation.")
             messagebox.showerror("Error", f"Interface activation failed: {e}")
